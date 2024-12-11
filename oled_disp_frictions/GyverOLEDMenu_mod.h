@@ -239,6 +239,12 @@ public:
                 break; 
         case 3: _oled->print(" A");
                 break;
+        case 4: _oled->print(" s");
+                break;
+        case 5: _oled->print(" mc");
+                break;
+        case 6: _oled->print(" ms");
+                break;
       }
 
       
