@@ -62,7 +62,7 @@
 #define KEY_LONGPUSH_DELAY 25
 
 #define STR_LENGTH 15*2 // 2 bytes per symbol
-#define I2C_REG_SIZE 9
+#define I2C_REG_SIZE 14
 #define MENUS_AT_PAGE 6
 
 struct SwitchFilter{
@@ -160,8 +160,8 @@ struct i2c_data_{
   uint8_t statusbyte0;
   uint8_t statusbyte1;
   uint8_t statusbyte2;
-  uint8_t paramtodisp;
-  uint8_t paramtodisp_addr;
+  uint8_t current_page;
+  uint8_t data[5];
   uint8_t paramfromdisp;
   uint8_t paramfromdisp_addr;
 };
@@ -205,8 +205,7 @@ void Init_i2c_data()
   i2c_data.statusbyte2 = 0;
   i2c_data.paramfromdisp = 0;
   i2c_data.paramfromdisp_addr = 0;
-  i2c_data.paramtodisp_addr = 0;
-  i2c_data.paramtodisp = 0;
+  i2c_data.current_page = 0;
 }
 
 void InitMainScreenSet()
@@ -333,7 +332,7 @@ void MainScreen(MainScreenSet * screen)
   oled.clear();
   oled.drawBitmap(0,0, gaz71, 128, 64);
 
-  oled.setCursorXY(70, 56); 
+  oled.setCursorXY(0,0); //(70, 56); 
   oled.setScale(1);
   if (lang_eeprom == 0) oled.print(F("ГАЗ-71")); else oled.print(F("GAZ-71"));
 
@@ -402,28 +401,28 @@ void MainScreen(MainScreenSet * screen)
   
   if (screen->Left_button)  // left letter (button)
   {
-    oled.setCursorXY(7, 5); 
+    oled.setCursorXY(7, 17); 
     if (lang_eeprom == 0) oled.print(F("Л")); else oled.print(F("L"));
-    oled.circle(8,8,8,OLED_STROKE);
+    oled.circle(8,19,8,OLED_STROKE);
   }
 
   if (screen->Right_button)
   {
-    oled.setCursorXY(29, 5); // rigth letter (button)
+    oled.setCursorXY(29, 17); // rigth letter (button)
     if (lang_eeprom == 0) oled.print(F("П")); else oled.print(F("R")); 
-    oled.circle(31,8,8,OLED_STROKE);
+    oled.circle(31,19,8,OLED_STROKE);
   }
 
   if (screen->Left_fault || screen->Right_fault)  //Global fault
   {
-    oled.setCursorXY(0, 28);
+    oled.setCursorXY(0, 32);
     if (lang_eeprom == 0) oled.print(F("АВАРИЯ")); else oled.print(F("FAULT"));
   }
 
 
   if (screen->Water_mode)  //Water mode
   {
-    oled.setCursorXY(0, 42);
+    oled.setCursorXY(0, 43);
     if (lang_eeprom == 0) oled.print(F("ВОДА")); else oled.print(F("WATER"));
   }
 
@@ -449,17 +448,22 @@ void receiveEvent(int howMany) {
   i2c_data.statusbyte0 = i2c_buf[1];
   i2c_data.statusbyte1 = i2c_buf[2];
   i2c_data.statusbyte2 = i2c_buf[3];
-  i2c_data.paramtodisp = i2c_buf[4];
-  i2c_data.paramtodisp_addr = i2c_buf[5];
+  i2c_data.current_page = i2c_buf[4];
+  
+  for (i=0; i<5; i++)
+  {
+    i2c_data.data[i] = i2c_buf[5+i];
+  }
 
 }
 
 void requestEvent() {
 
+
   if (menu_visible) 
   { 
     i2c_buf[0] = 0;
-    i2c_buf[1] = requested_menu+(menu_page-1)*5;
+    i2c_buf[1] = menu_page; //requested_menu+(menu_page-1)*5;
     i2c_buf[2] = i2c_data.paramfromdisp;
     i2c_buf[3] = i2c_data.paramfromdisp_addr;
     requested_menu++;  
@@ -470,12 +474,7 @@ void requestEvent() {
     i2c_buf[2] = 0;
     i2c_buf[3] = 0;
   }
-
-
-
   Wire.write(&i2c_buf[0],I2C_REG_SIZE);
-
-
 
   if (requested_menu > 5) 
   {
@@ -499,8 +498,8 @@ void UpdateParams()
   int i,j = 0;
   
 
-  if ((requested_menu > 0) && (requested_menu < 6))
-      params_buf[BuffAddrFromDataAddr(i2c_data.paramtodisp_addr)] = i2c_data.paramtodisp; 
+  //if ((requested_menu > 0) && (requested_menu < 6))
+  //    params_buf[BuffAddrFromDataAddr(i2c_data.paramtodisp_addr)] = i2c_data.paramtodisp; 
 
   if (menu_page == 9) 
   {
@@ -513,6 +512,8 @@ void UpdateParams()
     if (menu_page > 0)
     j=i+((menu_page-1)*5); else
     j = 0;
+
+    params_buf[i] = i2c_data.data[i];
     params_min[i] = pgm_read_byte(&menus[j].min);
     params_max[i] = pgm_read_byte(&menus[j].max);
     params_dp[i] =  (int8_t) pgm_read_byte(&menus[j].dp);
@@ -617,8 +618,8 @@ void Update_status()
   if (i2c_data.statusbyte2 & (1 << STATUS_BIT2_L_TRIP_STAGE2)) main_oled.Left_fault+=2;  
 
   main_oled.Right_fault = 0;
-  if (i2c_data.statusbyte1 & (1 << STATUS_BIT1_R_TRIP_STAGE1)) main_oled.Left_fault+=1;
-  if (i2c_data.statusbyte2 & (1 << STATUS_BIT2_R_TRIP_STAGE2)) main_oled.Left_fault+=2;  
+  if (i2c_data.statusbyte1 & (1 << STATUS_BIT1_R_TRIP_STAGE1)) main_oled.Right_fault+=1;
+  if (i2c_data.statusbyte2 & (1 << STATUS_BIT2_R_TRIP_STAGE2)) main_oled.Right_fault+=2;  
         
   main_oled.Squeeze_mode=i2c_data.statusbyte2 & (1 << STATUS_BIT2_SQUEEZE);  
   main_oled.Hold_on = i2c_data.statusbyte2 & (1 << STATUS_BIT2_HOLD_ON_LOAD); 
@@ -972,9 +973,12 @@ void loop() {
     if (!Key1.outstate) Key1.lock = 0;
     if (!Key2.outstate) Key2.lock = 0; 
     if (!Key3.outstate) Key3.lock = 0;
-
+    
+    EVERY_N_MILLISECONDS(100){
+      Update_status();
+    }
       
-    EVERY_N_MILLISECONDS(300){
+    EVERY_N_MILLISECONDS(200){
 
       if (!menu_visible)  
       {      
@@ -983,14 +987,9 @@ void loop() {
       if (!Setup_param) {
         UpdateParams();
         menu.refresh();
-      } else
-      {
-
       }
     }
       
-    EVERY_N_MILLISECONDS(200){
-      Update_status();
-    }
+
 
 }
