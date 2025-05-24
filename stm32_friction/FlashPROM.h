@@ -16,7 +16,7 @@
 #define STARTADDR ((uint32_t)0x0801F800)         // адрес, с которого будет начинаться запись во флеш (с начала 126-ой страницы F103)
 #define ENDMEMORY ((uint32_t)0x0801FC00 + 1024)  // последняя ячейка флеша (F103)
 #define PAGES 2    // количество страниц для очистки                           // размер буфера для записи
-#define BUFFSIZE 45
+#define BUFFSIZE 46
 #define DATAWIDTH 2                              // размерность данных буфера 16 бит - 2, 32 бита - 4
 #define WIDTHWRITE FLASH_TYPEPROGRAM_HALFWORD    // длина слова (16 бит) для записи в функции HAL_FLASH_Program(...), если 32бита тогда FLASH_TYPEPROGRAM_WORD
 #define DEBUG 0

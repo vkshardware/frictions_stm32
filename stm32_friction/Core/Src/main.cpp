@@ -4,7 +4,7 @@
   * @file           : main.c
   * @brief          : Main program body
   ******************************************************************************
-  * @attention
+  * @attention       Frictions GAZ-71 DC motors controller. Firmware v5.0
   *
   * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
@@ -29,7 +29,7 @@
 /* USER CODE BEGIN PTD */
 
 
-#define PARAMETERS 44     //See also BUFFSIZE 44+1 in FlashPROM.h
+#define PARAMETERS 45     //See also BUFFSIZE 45+1 in FlashPROM.h
 #define PAGES_COUNT 6
 #define STR_LENGTH 15*2 // 2 bytes per symbol
 
@@ -201,18 +201,6 @@ struct _ProcessChannel{
 
 
 
-struct MenuRow{
-  uint8_t id;
-	char desc_cust[STR_LENGTH];
-	char desc_en[STR_LENGTH];
-  uint8_t def;
-  uint8_t min;
-  uint8_t max;
-  uint8_t writable; // 1- writable, 0 - readonly
-  int8_t dp; //decimal point position
-  uint8_t symb; // 0 - null, 1 - c, 2 - %, 3- A, 4 - s, 5 - mc, 6 - ms, 7 - Celsius, 8 - km/h
-};
-
 struct MainDataSet{
   bool Water_mode;
   bool Squeeze_mode;
@@ -226,12 +214,25 @@ struct MainDataSet{
 	uint8_t Right_fault_stage2;
 	uint8_t Left_On;
 	uint8_t Right_On;
+	uint8_t Left_Current;
+	uint8_t Right_Current;
 	uint8_t DO_mode1;
 	uint8_t DO_error;
 	uint8_t DI_mode1;
 	uint8_t DI_mode2;
 };
 
+struct MenuRow{
+  uint8_t id;
+	char desc_cust[STR_LENGTH];
+	char desc_en[STR_LENGTH];
+  uint8_t def;
+  uint8_t min;
+  uint8_t max;
+  uint8_t writable; // 1- writable, 0 - readonly
+  int8_t dp; //decimal point position
+  uint8_t symb; // 0 - null, 1 - c, 2 - %, 3- A, 4 - s, 5 - mc, 6 - ms, 7 - Celsius, 8 - km/h
+};
 
 
 const MenuRow menus[] = {
@@ -239,30 +240,30 @@ const MenuRow menus[] = {
   {2,"02 ??. ?????","02 Return time",20,3,100,1,1,1},
   {3,"03 ??. ??. ??.","03 Moveup time",10,0,100,1,1,1},
   {4,"04 ??. ???.","04 Joys. L",0,0,0,0,0,2},
-  {5,"05 ???. ???.","05 CMD L",0,0,0,0,0,0},
-  {6,"06 X_L ?????.","06 X_L conn.",0,0,0,0,1,0},
+  {5,"05 ???. ???.","05 CMD L",0,0,0,0,1,0},
+  {6,"06 X_L ?????.","06 X_L conn.",0,0,0,0,0,0},
   {7,"07 ??. ??.","07 Joys. R",0,0,0,0,0,2},
   {8,"08 ???. ??.","08 CMD R",0,0,0,0,1,0},
   {9,"09 X_R ?????.","09 X_R conn.,",0,0,0,0,0,0},
   {10,"10 X_L ???.","10 X_L low",10,0,99,1,0,2},
   {11,"11 X_L 4 ??.","11 X_L 4 st.",25,0,99,1,0,2},
-  {12,"12 X_L 3 ??.","12 X_L 3 st.",30,0,99,1,0,2},
-  {13,"13 X_L 2 ??.","13 X_L 2 st.",35,0,99,1,0,2},
-  {14,"14 X_L 1 ??.","14 X_L 1 st.",40,0,99,1,0,2},
-  {15,"15 X_L 1 ???.","15 X_L 1 res.",61,0,99,1,0,2},
-  {16,"16 X_L 2 ???.","16 X_L 2 res.",66,0,99,1,0,2},
-  {17,"17 X_L 3 ???.","17 X_L 3 res.",71,0,99,1,0,2},
-  {18,"18 X_L 4 ???.","18 X_L 4 res.",76,0,99,1,0,2},
+  {12,"12 X_L 3 ??.","12 X_L 3 st.",28,0,99,1,0,2},
+  {13,"13 X_L 2 ??.","13 X_L 2 st.",31,0,99,1,0,2},
+  {14,"14 X_L 1 ??.","14 X_L 1 st.",34,0,99,1,0,2},
+  {15,"15 X_L 1 ???.","15 X_L 1 res.",45,0,99,1,0,2},
+  {16,"16 X_L 2 ???.","16 X_L 2 res.",48,0,99,1,0,2},
+  {17,"17 X_L 3 ???.","17 X_L 3 res.",53,0,99,1,0,2},
+  {18,"18 X_L 4 ???.","18 X_L 4 res.",56,0,99,1,0,2},
   {19,"19 X_L ????.","19 X_L high",90,0,99,1,0,2},
   {20,"20 X_R ???.","20 X_R low",10,0,99,1,0,2},
   {21,"21 X_R 4 ??.","21 X_R 4 st.",25,0,99,1,0,2},
-  {22,"22 X_R 3 ??.","22 X_R 3 st.",30,0,99,1,0,2},
-  {23,"23 X_R 2 ??.","23 X_R 2 st.",35,0,99,1,0,2},
-  {24,"24 X_R 1 ??.","24 X_R 1 st.",40,0,99,1,0,2},
-  {25,"25 X_R 1 ???.","25 X_R 1 res.",61,0,99,1,0,2},
-  {26,"26 X_R 2 ???.","26 X_R 2 res.",66,0,99,1,0,2},
-  {27,"27 X_R 3 ???.","27 X_R 3 res.",71,0,99,1,0,2},
-  {28,"28 X_R 4 ???.","28 X_R 4 res.",76,0,99,1,0,2},
+  {22,"22 X_R 3 ??.","22 X_R 3 st.",28,0,99,1,0,2},
+  {23,"23 X_R 2 ??.","23 X_R 2 st.",31,0,99,1,0,2},
+  {24,"24 X_R 1 ??.","24 X_R 1 st.",34,0,99,1,0,2},
+  {25,"25 X_R 1 ???.","25 X_R 1 res.",45,0,99,1,0,2},
+  {26,"26 X_R 2 ???.","26 X_R 2 res.",48,0,99,1,0,2},
+  {27,"27 X_R 3 ???.","27 X_R 3 res.",53,0,99,1,0,2},
+  {28,"28 X_R 4 ???.","28 X_R 4 res.",56,0,99,1,0,2},
   {29,"29 X_R ????.","29 X_R high",90,0,99,1,0,2},
   {30,"30 I????. ???.","30 Ijam. L",10,1,50,1,0,3},
   {31,"31 T????. ???.","31 Tjam. L",10,1,99,1,-1,5},
@@ -277,8 +278,9 @@ const MenuRow menus[] = {
   {40,"40 ????. ???.","40 HAN logic",0,0,1,1,0,0},
   {41,"41 CAN ????.","41 CAN speed",6,0,8,1,0,0}, //6 (125kbps), 3 (250kbps), 2 (375kbps), 1 (750kbps)
   {42,"42 CAN ???.","42 CAN address",0x11,0x01,0xFE,1,0,0}, 
-  {43,"43 ????????", "43 Firmware", 10,0,100,0,1,0},
-  {44,"44 ????", "44 Language",1,0,1,1,0,0},
+  {43,"43 DO ?????.","43 DO func.",0,0,6,1,0,0}, 
+  {44,"44 ????????", "44 Firmware", 50,0,100,0,1,0},
+  {45,"45 ????", "45 Language",1,0,1,1,0,0},
 };
 
 class ChannelControl{	
@@ -398,6 +400,9 @@ AnalogFilter valLn, valLp, valRn, valRp; //jamming protection
 AnalogFilter oc_valLn, oc_valLp, oc_valRn, oc_valRp;  //over current protection (short circuit)
 JoystickFilter an_R, an_L;
 
+float _err_measure = 0.8; 
+float _q = 0.1;   
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -470,6 +475,8 @@ void InitMainScreenSet()
 	main_data.DO_error = 0;
   main_data.SW_L_state = 0;
 	main_data.SW_R_state = 0;
+	main_data.Left_Current = 0;
+	main_data.Right_Current = 0;
 }
 
 void InitAnalogPins(void)
@@ -506,21 +513,19 @@ void InitAnalogPins(void)
 	pa[3].out_value = 0;
 	pa[3].analog_limit = 0;	
 	
-	//X_R
-  pa[4].trip = false;
-	pa[4].in_value = 0;
-	pa[4].time_rate = 3;  
-	pa[4].time_count = 0;
-	pa[4].out_value = 0;
-	pa[4].analog_limit = 0;
+	// Joystick L resistor initialization
+	
+	an_L.scanrate = 2;	
+	an_L.joystick_step = 0;
+	an_L.mirror_joy_step = 0;
+	an_L.enabled = false;	
+	
+	// Joystick R resistor initialization
 
-  //X_L
-  pa[5].trip = false;
-	pa[5].in_value = 0;
-	pa[5].time_rate = 3;  
-	pa[5].time_count = 0;
-	pa[5].out_value = 0;
-	pa[5].analog_limit = 0;	
+	an_R.scanrate = 2;	
+	an_R.joystick_step = 0;
+	an_R.mirror_joy_step = 0;
+	an_R.enabled = false;
 	
 }
 
@@ -1163,14 +1168,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) // 100Hz Timer
     if (Right.timer_count_en) Right.timer_count++;
     if (Right.timer_count == 0xFFFF) Right.timer_count = 0;
 
-		//Calculate PWM (persentage to 8-bit value)
-//		pwm_L.dc_fill = Calc_PWM(pwm_L.duty_cycle);
-//		pwm_R.dc_fill = Calc_PWM(pwm_R.duty_cycle);
-		
-		// Analog values pa[0]...pa[5]
-	
-		//	for (uint8_t i=0;i<6;i++)
-			//	AnalogPinTrip(&pa[i]);
 	
 		tick100Hz++;
 		
@@ -1196,8 +1193,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) // 100Hz Timer
 			// Stop Left Channel
 			Left.Stop();
 		}
-	
-	
+
 	
 		CurrentProtection(&valRn);
 		CurrentProtection(&valRp);
@@ -1207,6 +1203,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) // 100Hz Timer
 			// Stop Right Channel
 			Right.Stop();
 		} 
+		
+
 		
 	
 		Left.switch_down = sw_leftdown.outstate;
@@ -1349,6 +1347,16 @@ uint32_t GetADC1_Value(uint32_t channel)
 		return (g_ADCValue);
 }
 
+void Init_Joystick()
+{
+	for (int i = 0; i <=9; i++)
+	{
+		an_L.steps[i] = params_buf[i+10];
+		an_R.steps[i] = params_buf[i+20];
+	}
+	
+}
+
 
 void WriteParamsToFlash()
 {
@@ -1360,6 +1368,7 @@ void WriteParamsToFlash()
 	}
 	
 	Init_Protections();
+	Init_Joystick();
 	
 	write_to_flash(&params_buf[0]);
 }
@@ -1367,6 +1376,7 @@ void WriteParamsToFlash()
 void UpdateStatus()
 {
 	bool write_params = false;
+	uint16_t temp_curr = 0;
 	
 	main_data.Left_On = Left.moving_bwd | Left.moving_fwd; 
 	main_data.Right_On = Right.moving_bwd | Right.moving_fwd;
@@ -1394,7 +1404,9 @@ void UpdateStatus()
 	i2c_buf[1] = i2c_data.statusbyte0;
 	i2c_buf[2] = i2c_data.statusbyte1;
 	i2c_buf[3] = i2c_data.statusbyte2;
-	i2c_buf[4] = i2c_data.current_page;
+	i2c_buf[4] = main_data.Left_Current;
+	i2c_buf[5] = main_data.Right_Current;
+	i2c_buf[6] = i2c_data.current_page;
 	
 	
 	// current parameters at page						 
@@ -1405,12 +1417,12 @@ void UpdateStatus()
 		  int index = i+1+(i2c_data.current_page-1)*5;
 			
 			if (index <= PARAMETERS)
-			    i2c_buf[5+i] = params_buf[index];
+			    i2c_buf[7+i] = params_buf[index];
 			else
-			    i2c_buf[5+i] = 0;
+			    i2c_buf[7+i] = 0;
 		}
 		else
-			 i2c_buf[5+i] = 0;
+			 i2c_buf[7+i] = 0;
 	}
 	
 	if ((i2c_data.paramfromdisp_addr > 0) && (i2c_data.paramfromdisp_addr <= PARAMETERS))
@@ -1429,7 +1441,23 @@ void UpdateStatus()
 			
 		}
 	}
-
+	params_buf[4] = an_L.in_value;
+	params_buf[5] = Left.goal_step*10+Left.curr_step;
+	params_buf[6] = an_L.enabled;
+	
+	params_buf[7] = an_R.in_value;
+	params_buf[8] = Right.goal_step*10+Right.curr_step;
+	params_buf[9] = an_R.enabled;	
+	
+	temp_curr = (pa[2].out_value+pa[3].out_value)*10/CURRENT_COEFFICIENT;
+	if (temp_curr > 0xFF) temp_curr = 0xFF;
+	
+	main_data.Left_Current = temp_curr;
+	
+	temp_curr = (pa[0].out_value+pa[1].out_value)*10/CURRENT_COEFFICIENT;
+	if (temp_curr > 0xFF) temp_curr = 0xFF;
+	
+	main_data.Right_Current = temp_curr;
 
 }
 
@@ -1611,7 +1639,9 @@ void CANsendmsg()
 		msgData[0] = i2c_data.statusbyte0;
 		msgData[1] = i2c_data.statusbyte1;
 		msgData[2] = i2c_data.statusbyte2;
-		
+		msgData[3] = main_data.Left_Current;
+		msgData[4] = main_data.Right_Current;
+
     
     HAL_CAN_AddTxMessage(&hcan, &msgHeader, &msgData[0], &mailBoxNum);
   }
@@ -1730,6 +1760,30 @@ void DO_Mode1(bool state)
 		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_RESET);
 }
 
+float expRunningAverageAdaptive(float newVal) {
+  static float filVal = 0;
+  float k;
+
+  if (abs(newVal - filVal) > 1.5) k = 0.9;
+  else k = 0.03;
+  
+  filVal += (newVal - filVal) * k;
+  return filVal;
+}
+
+
+float simpleKalman(float newVal) {
+  float _kalman_gain, _current_estimate;
+  static float _err_estimate = _err_measure;
+  static float _last_estimate;
+  _kalman_gain = (float)_err_estimate / (_err_estimate + _err_measure);
+  _current_estimate = _last_estimate + (float)_kalman_gain * (newVal - _last_estimate);
+  _err_estimate =  (1.0 - _kalman_gain) * _err_estimate + fabs(_last_estimate - _current_estimate) * _q;
+  _last_estimate = _current_estimate;
+  return _current_estimate;
+}
+
+
 /* USER CODE END 0 */
 
 /**
@@ -1801,6 +1855,7 @@ int main(void)
   //UpdateChannelsData();
   Init_Protections();
 	Init_Switches();
+	Init_Joystick();
 	
   CAN_FilterTypeDef canFilterConfig;
   canFilterConfig.FilterBank = 0;
@@ -1843,7 +1898,12 @@ int main(void)
 			in_left.protection_reset = false;
 		} 
 		
-		DO_Error(valLp.trip || oc_valLp.trip || valLn.trip || oc_valLn.trip);
+		// DO Processing
+		if (params_buf[43] == 0) DO_Error(valLp.trip || oc_valLp.trip || valLn.trip || oc_valLn.trip ||
+			                                valRp.trip || oc_valRp.trip || valRn.trip || oc_valRn.trip);
+		if (params_buf[43] == 1) DO_Error(true);
+		if (params_buf[43] == 2) DO_Mode1(true); else DO_Mode1(false);
+		
 
 
 		if (in_right.protection_reset && (valRp.trip || oc_valRp.trip || valRn.trip || oc_valRn.trip)) {
@@ -1873,27 +1933,14 @@ int main(void)
 		ProtectionProcess(ADC_CHANNEL_3, value);
 		AnalogAddValue(&pa[3], value); //ML+
 		
-		// Joystick processing
-		AnalogAddValue(&pa[4], GetADC1_Value(ADC_CHANNEL_4));  //X_R
-		AnalogAddValue(&pa[5], GetADC1_Value(ADC_CHANNEL_5));  //X_L
-		
 		
 		Process_Channels();
 		
-		/*
-    if (tick100Hz >= 10)
-		{
-			tmp = !tmp;
-			DO_Error(tmp);
-			tick100Hz = 0;
-		}
 
-		*/
 		
 		if ((HAL_GetTick() - timers[0]) > 100) //0.1 sec
 		{ 
 			UpdateStatus();
-			//UpdateChannelsData();
 			ProcessDIevents();
 			
 			timers[0] = HAL_GetTick();	
@@ -1915,23 +1962,28 @@ int main(void)
 		if ((HAL_GetTick() - timers[2]) > 10) //every 10 ms
 		{			
 			AnalogAverage(&pa[0]);
-			valRn.in_value = pa[0].out_value;
+			valRn.in_value = pa[0].out_value;  //MR-
 			AnalogAverage(&pa[1]);
-			valRp.in_value = pa[1].out_value;
+			valRp.in_value = pa[1].out_value;  //MR+
 			AnalogAverage(&pa[2]);
-			valLn.in_value = pa[2].out_value;
+			valLn.in_value = pa[2].out_value;  //ML-
 			AnalogAverage(&pa[3]);
-			valLp.in_value = pa[3].out_value;
+			valLp.in_value = pa[3].out_value;  //ML+
+			
+
+			
 			
 			timers[2] = HAL_GetTick();
 		}
 
 		
-		if ((HAL_GetTick() - timers[3]) > 300) //0.3 sec
+		if ((HAL_GetTick() - timers[3]) > 50) //50 msec
 		{
+			an_L.in_value = simpleKalman(GetADC1_Value(ADC_CHANNEL_4)/41);     //X_L  /4096*100%
+      an_R.in_value = simpleKalman(GetADC1_Value(ADC_CHANNEL_5)/41); 	   //X_R  /4096*100%		
 
-			AnalogAverage(&pa[4]);
-			AnalogAverage(&pa[5]);
+	    _joystick_filter(&an_L);
+	    _joystick_filter(&an_R);
 			 
 			timers[3] = HAL_GetTick();
 		}

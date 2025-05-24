@@ -26,7 +26,7 @@
 
 #define WAIT_100HZ 0xB1  // Timer2 100Hz
 
-#define PARAMETERS 44
+#define PARAMETERS 45
 
 
 
@@ -112,30 +112,30 @@ const MenuRow menus[] PROGMEM = {
   {2,"02 Вр. возвр","02 Return time",20,3,100,1,1,1},
   {3,"03 Вр. дв. вв.","03 Moveup time",10,0,100,1,1,1},
   {4,"04 Дж. лев.","04 Joys. L",0,0,0,0,0,2},
-  {5,"05 Кмд. лев.","05 CMD L",0,0,0,0,0,0},
-  {6,"06 X_L подкл.","06 X_L conn.",0,0,0,0,1,0},
+  {5,"05 Кмд. лев.","05 CMD L",0,0,0,0,1,0},
+  {6,"06 X_L подкл.","06 X_L conn.",0,0,0,0,0,0},
   {7,"07 Дж. пр.","07 Joys. R",0,0,0,0,0,2},
   {8,"08 Кмд. пр.","08 CMD R",0,0,0,0,1,0},
   {9,"09 X_R подкл.","09 X_R conn.,",0,0,0,0,0,0},
   {10,"10 X_L ниж.","10 X_L low",10,0,99,1,0,2},
   {11,"11 X_L 4 ст.","11 X_L 4 st.",25,0,99,1,0,2},
-  {12,"12 X_L 3 ст.","12 X_L 3 st.",30,0,99,1,0,2},
-  {13,"13 X_L 2 ст.","13 X_L 2 st.",35,0,99,1,0,2},
-  {14,"14 X_L 1 ст.","14 X_L 1 st.",40,0,99,1,0,2},
-  {15,"15 X_L 1 рез.","15 X_L 1 res.",61,0,99,1,0,2},
-  {16,"16 X_L 2 рез.","16 X_L 2 res.",66,0,99,1,0,2},
-  {17,"17 X_L 3 рез.","17 X_L 3 res.",71,0,99,1,0,2},
-  {18,"18 X_L 4 рез.","18 X_L 4 res.",76,0,99,1,0,2},
+  {12,"12 X_L 3 ст.","12 X_L 3 st.",28,0,99,1,0,2},
+  {13,"13 X_L 2 ст.","13 X_L 2 st.",33,0,99,1,0,2},
+  {14,"14 X_L 1 ст.","14 X_L 1 st.",35,0,99,1,0,2},
+  {15,"15 X_L 1 рез.","15 X_L 1 res.",45,0,99,1,0,2},
+  {16,"16 X_L 2 рез.","16 X_L 2 res.",48,0,99,1,0,2},
+  {17,"17 X_L 3 рез.","17 X_L 3 res.",53,0,99,1,0,2},
+  {18,"18 X_L 4 рез.","18 X_L 4 res.",56,0,99,1,0,2},
   {19,"19 X_L верх.","19 X_L high",90,0,99,1,0,2},
   {20,"20 X_R ниж.","20 X_R low",10,0,99,1,0,2},
   {21,"21 X_R 4 ст.","21 X_R 4 st.",25,0,99,1,0,2},
-  {22,"22 X_R 3 ст.","22 X_R 3 st.",30,0,99,1,0,2},
-  {23,"23 X_R 2 ст.","23 X_R 2 st.",35,0,99,1,0,2},
-  {24,"24 X_R 1 ст.","24 X_R 1 st.",40,0,99,1,0,2},
-  {25,"25 X_R 1 рез.","25 X_R 1 res.",61,0,99,1,0,2},
-  {26,"26 X_R 2 рез.","26 X_R 2 res.",66,0,99,1,0,2},
-  {27,"27 X_R 3 рез.","27 X_R 3 res.",71,0,99,1,0,2},
-  {28,"28 X_R 4 рез.","28 X_R 4 res.",76,0,99,1,0,2},
+  {22,"22 X_R 3 ст.","22 X_R 3 st.",28,0,99,1,0,2},
+  {23,"23 X_R 2 ст.","23 X_R 2 st.",33,0,99,1,0,2},
+  {24,"24 X_R 1 ст.","24 X_R 1 st.",35,0,99,1,0,2},
+  {25,"25 X_R 1 рез.","25 X_R 1 res.",45,0,99,1,0,2},
+  {26,"26 X_R 2 рез.","26 X_R 2 res.",48,0,99,1,0,2},
+  {27,"27 X_R 3 рез.","27 X_R 3 res.",53,0,99,1,0,2},
+  {28,"28 X_R 4 рез.","28 X_R 4 res.",56,0,99,1,0,2},
   {29,"29 X_R верх.","29 X_R high",90,0,99,1,0,2},
   {30,"30 Iзакл. лев.","30 Ijam. L",10,1,50,1,0,3},
   {31,"31 Tзакл. лев.","31 Tjam. L",10,1,99,1,-1,5},
@@ -149,9 +149,10 @@ const MenuRow menus[] PROGMEM = {
   {39,"39 Возвр. вода","39 Ret. water",4,1,10,1,-1,2},
   {40,"40 Спец. лог.","40 HAN logic",0,0,1,1,0,0},
   {41,"41 CAN скор.","41 CAN speed",4,0,6,1,0,0},
-  {42,"42 CAN адр.","42 CAN address",0x11,0x01,0xFE,1,0,0}, 
-  {43,"43 Прошивка", "43 Firmware", 10,0,100,0,1,0},
-  {44,"44 Язык", "44 Language",1,0,1,1,0,0},
+  {42,"42 CAN адр.","42 CAN address",0x11,0x01,0xFE,1,0,0},
+  {43,"43 DO функц.","43 DO func.",0,0,6,1,0,0}, 
+  {44,"44 Прошивка", "44 Firmware", 10,0,100,0,1,0},
+  {45,"45 Язык", "45 Language",1,0,1,1,0,0},
 };
 
 MainScreenSet main_oled;
@@ -160,6 +161,8 @@ struct i2c_data_{
   uint8_t statusbyte0;
   uint8_t statusbyte1;
   uint8_t statusbyte2;
+  uint8_t left_current;
+  uint8_t right_current;
   uint8_t current_page;
   uint8_t data[5];
   uint8_t paramfromdisp;
@@ -203,6 +206,8 @@ void Init_i2c_data()
   i2c_data.statusbyte0 = 0;
   i2c_data.statusbyte1 = 0;
   i2c_data.statusbyte2 = 0;
+  i2c_data.left_current = 0;
+  i2c_data.right_current = 0;
   i2c_data.paramfromdisp = 0;
   i2c_data.paramfromdisp_addr = 0;
   i2c_data.current_page = 0;
@@ -232,7 +237,7 @@ void print_friction(uint8_t side, uint8_t state)
 {
   uint8_t x, y = 0;
  
-  y = 14;
+  y = 16;
 
   if (side == 0) x = 50; else
   if (side == 1) x = 101;
@@ -335,6 +340,28 @@ void MainScreen(MainScreenSet * screen)
   oled.setCursorXY(0,0); //(70, 56); 
   oled.setScale(1);
   if (lang_eeprom == 0) oled.print(F("ГАЗ-71")); else oled.print(F("GAZ-71"));
+  
+  //Print Current
+
+  oled.setCursorXY(46,0); 
+  int __dec = i2c_data.left_current / 10;
+  
+  oled.print(__dec);
+  oled.print(".");
+  
+  int __units = i2c_data.left_current % 10;
+  oled.print(__units);
+  oled.print("A");
+
+  oled.setCursorXY(98,0); 
+  __dec = i2c_data.right_current / 10;
+  
+  oled.print(__dec);
+  oled.print(".");
+  
+  __units = i2c_data.right_current % 10;
+  oled.print(__units);
+  oled.print("A"); 
 
    // left clutch state
   
@@ -448,11 +475,13 @@ void receiveEvent(int howMany) {
   i2c_data.statusbyte0 = i2c_buf[1];
   i2c_data.statusbyte1 = i2c_buf[2];
   i2c_data.statusbyte2 = i2c_buf[3];
-  i2c_data.current_page = i2c_buf[4];
+  i2c_data.left_current = i2c_buf[4];
+  i2c_data.right_current = i2c_buf[5];
+  i2c_data.current_page = i2c_buf[6];
   
   for (i=0; i<5; i++)
   {
-    i2c_data.data[i] = i2c_buf[5+i];
+    i2c_data.data[i] = i2c_buf[7+i];
   }
 
 }
@@ -503,8 +532,8 @@ void UpdateParams()
 
   if (menu_page == 9) 
   {
-     params_buf[2] = pgm_read_byte(&menus[43-1].def); //43 parameter
-     params_buf[3] = lang_eeprom;                     //44 parameter
+     params_buf[3] = pgm_read_byte(&menus[44-1].def); //44 parameter
+     params_buf[4] = lang_eeprom;                     //45 parameter
   }
 
   for (i = 0; i < 5; i++)
@@ -526,6 +555,11 @@ void UpdateParams()
       params_symb[i] = 6;    
 
     //params_buf[i]=pgm_read_byte(&menus[j].def);
+  }
+  
+  if (menu_page == 9) 
+  {
+     params_buf[(PARAMETERS-1)%5] = lang_eeprom;                     //45 parameter
   }
       
 }
@@ -552,10 +586,6 @@ void UpdateTextBuf()
                             strlcpy_P(&param_text[i][0], menus[j].desc_en,STR_LENGTH);
 
     }
-
-    
-
-
   }
 }
 
@@ -648,7 +678,7 @@ void setup() {
 
   if (lang_eeprom > 1)
   {
-    lang_eeprom = pgm_read_byte(&menus[44-1].def);;
+    lang_eeprom = pgm_read_byte(&menus[PARAMETERS-1].def);;
     EEPROM.put(0, lang_eeprom);
   }
 
@@ -695,7 +725,7 @@ void onItemChange(const int index, const void* val, const byte valType) {
 boolean onItemPrintOverride(const int index, const void* val, const byte valType) {
 
   if (index > 0)
-  if (!((index >=5) && (menu_page == 9)))
+  if (!((index > 5) && (menu_page == 9)))
       return false;
       
 
@@ -757,7 +787,7 @@ void menu_page_select(int index)
                     break; 
     case 42 ... 47: menu_page = 8;
                     break;             
-    case 48 ... 52: menu_page = 9;
+    case 48 ... 53: menu_page = 9;
                     break;  
   }
 
@@ -834,7 +864,7 @@ void UpButton()
         {
           if (!Setup_param)
           {
-            menu.gotoIndex_(4); 
+            menu.gotoIndex_(5); 
           } else
            menu.selectNext(0);
 
@@ -937,8 +967,9 @@ void loop() {
 
           if (old_param_value != params_buf[addr]) {
 
-            if ((menu_page == 9) && (addr == 3)){ //44 parameter
+            if ((menu_page == 9) && (addr == 4)){ //45 parameter
               lang_eeprom = params_buf[addr];
+
               EEPROM.put(0, lang_eeprom);
 
             } else
