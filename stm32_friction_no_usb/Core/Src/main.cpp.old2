@@ -4,7 +4,7 @@
   * @file           : main.c
   * @brief          : Main program body
   ******************************************************************************
-  * @attention       Frictions GAZ-71 DC motors controller. Firmware v5.0
+  * @attention
   *
   * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
@@ -19,17 +19,19 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <math.h>
+
 #include "FlashPROM.h"
+#include <math.h>
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
-
-#define PARAMETERS 45     //See also BUFFSIZE 45+1 in FlashPROM.h
+#define PARAMETERS 44     //See also BUFFSIZE 45 in FlashPROM.h
 #define PAGES_COUNT 6
 #define STR_LENGTH 15*2 // 2 bytes per symbol
 
@@ -91,7 +93,7 @@
 
 
 #define CURRENT_OFF_DELAY 20   //current off delay 20 ms
-#define CURRENT_COEFFICIENT 25
+#define CURRENT_COEFFICIENT 5
 
 #define WAIT_10kHZ 0x37
 #define WAIT_100HZ 0xF63B
@@ -104,13 +106,12 @@
 #define PROTECTIONS_COUNT 6
 
 #define SQUELCH 5 // CURRENT OFF protection: reject noise if PWM on
-#define SQUELCH_MAIN_MODE 3
+#define SQUELCH_MAIN_MODE 0
 
 extern void erase_flash(void);
 extern uint32_t flash_search_adress(uint32_t address, uint16_t cnt);
 extern void write_to_flash(myBuf_t *buff);
 extern void read_last_data_in_flash(myBuf_t *buff);
-bool sq_off_left, sq_off_right = false;
 
 struct AnalogFilter{
 	uint64_t in_value;
@@ -128,7 +129,6 @@ struct SwitchFilter{
 	bool on_trigger;
 	bool off_trigger;
 	bool reset;
-	bool off;
 	bool protection_reset;
 	uint16_t scanrate;
 	GPIO_TypeDef * port;
@@ -201,27 +201,6 @@ struct _ProcessChannel{
 
 
 
-struct MainDataSet{
-  bool Water_mode;
-  bool Squeeze_mode;
-  bool Left_button;
-  bool Right_button;
-	uint8_t SW_L_state;     
-  uint8_t SW_R_state;     
-  uint8_t Left_fault_stage1;
-	uint8_t Left_fault_stage2;
-  uint8_t Right_fault_stage1;
-	uint8_t Right_fault_stage2;
-	uint8_t Left_On;
-	uint8_t Right_On;
-	uint8_t Left_Current;
-	uint8_t Right_Current;
-	uint8_t DO_mode1;
-	uint8_t DO_error;
-	uint8_t DI_mode1;
-	uint8_t DI_mode2;
-};
-
 struct MenuRow{
   uint8_t id;
 	char desc_cust[STR_LENGTH];
@@ -234,36 +213,57 @@ struct MenuRow{
   uint8_t symb; // 0 - null, 1 - c, 2 - %, 3- A, 4 - s, 5 - mc, 6 - ms, 7 - Celsius, 8 - km/h
 };
 
+struct MainDataSet{
+  bool Water_mode;
+  bool Squeeze_mode;
+  bool Left_button;
+  bool Right_button;
+	uint8_t SW_L_state;     
+  uint8_t SW_R_state;     
+  uint8_t Left_Strength_level;  //Level in persantage
+  uint8_t Left_fault_stage1;
+	uint8_t Left_fault_stage2;
+  uint8_t Right_fault_stage1;
+	uint8_t Right_fault_stage2;
+	uint8_t Left_On;
+	uint8_t Right_On;
+	uint8_t DO_mode1;
+	uint8_t DO_error;
+	uint8_t DI_mode1;
+	uint8_t DI_mode2;
+};
+
+
 
 const MenuRow menus[] = {
   {1,"01 ??. ??????","01 Sq. time",9,3,100,1,1,1},
   {2,"02 ??. ?????","02 Return time",20,3,100,1,1,1},
   {3,"03 ??. ??. ??.","03 Moveup time",10,0,100,1,1,1},
   {4,"04 ??. ???.","04 Joys. L",0,0,0,0,0,2},
-  {5,"05 ???. ???.","05 CMD L",0,0,0,0,1,0},
-  {6,"06 X_L ?????.","06 X_L conn.",0,0,0,0,0,0},
+  {5,"05 ???. ???.","05 CMD L",0,0,0,0,0,0},
+  {6,"06 X_L ?????.","06 X_L conn.",0,0,0,0,1,0},
   {7,"07 ??. ??.","07 Joys. R",0,0,0,0,0,2},
   {8,"08 ???. ??.","08 CMD R",0,0,0,0,1,0},
   {9,"09 X_R ?????.","09 X_R conn.,",0,0,0,0,0,0},
   {10,"10 X_L ???.","10 X_L low",10,0,99,1,0,2},
   {11,"11 X_L 4 ??.","11 X_L 4 st.",25,0,99,1,0,2},
-  {12,"12 X_L 3 ??.","12 X_L 3 st.",28,0,99,1,0,2},
-  {13,"13 X_L 2 ??.","13 X_L 2 st.",31,0,99,1,0,2},
-  {14,"14 X_L 1 ??.","14 X_L 1 st.",34,0,99,1,0,2},
-  {15,"15 X_L 1 ???.","15 X_L 1 res.",45,0,99,1,0,2},
-  {16,"16 X_L 2 ???.","16 X_L 2 res.",48,0,99,1,0,2},
-  {17,"17 X_L 3 ???.","17 X_L 3 res.",53,0,99,1,0,2},
-  {18,"18 X_L 4 ???.","18 X_L 4 res.",56,0,99,1,0,2},
+  {12,"12 X_L 3 ??.","12 X_L 3 st.",30,0,99,1,0,2},
+  {13,"13 X_L 2 ??.","13 X_L 2 st.",35,0,99,1,0,2},
+  {14,"14 X_L 1 ??.","14 X_L 1 st.",40,0,99,1,0,2},
+  {15,"15 X_L 1 ???.","15 X_L 1 res.",61,0,99,1,0,2},
+  {16,"16 X_L 2 ???.","16 X_L 2 res.",66,0,99,1,0,2},
+  {17,"17 X_L 3 ???.","17 X_L 3 res.",71,0,99,1,0,2},
+  {18,"18 X_L 4 ???.","18 X_L 4 res.",76,0,99,1,0,2},
   {19,"19 X_L ????.","19 X_L high",90,0,99,1,0,2},
   {20,"20 X_R ???.","20 X_R low",10,0,99,1,0,2},
   {21,"21 X_R 4 ??.","21 X_R 4 st.",25,0,99,1,0,2},
-  {22,"22 X_R 3 ??.","22 X_R 3 st.",28,0,99,1,0,2},
-  {23,"23 X_R 2 ??.","23 X_R 2 st.",31,0,99,1,0,2},
-  {24,"24 X_R 1 ??.","24 X_R 1 st.",34,0,99,1,0,2},
-  {25,"25 X_R 1 ???.","25 X_R 1 res.",45,0,99,1,0,2},
-  {26,"26 X_R 2 ???.","26 X_R 2 res.",48,0,99,1,0,2},
-  {27,"27 X_R 3 ???.","27 X_R 3 res.",53,0,99,1,0,2},
-  {28,"28 X_R 4 ???.","28 X_R 4 res.",56,0,99,1,0,2},
+  {22,"22 X_R 3 ??.","22 X_R 3 st.",30,0,99,1,0,2},
+  {23,"23 X_R 2 ??.","23 X_R 2 st.",35,0,99,1,0,2},
+  {24,"24 X_R 1 ??.","24 X_R 1 st.",40,0,99,1,0,2},
+  {25,"25 X_R 1 ???.","25 X_R 1 res.",61,0,99,1,0,2},
+  {26,"26 X_R 2 ???.","26 X_R 2 res.",66,0,99,1,0,2},
+  {27,"27 X_R 3 ???.","27 X_R 3 res.",71,0,99,1,0,2},
+  {28,"28 X_R 4 ???.","28 X_R 4 res.",76,0,99,1,0,2},
   {29,"29 X_R ????.","29 X_R high",90,0,99,1,0,2},
   {30,"30 I????. ???.","30 Ijam. L",10,1,50,1,0,3},
   {31,"31 T????. ???.","31 Tjam. L",10,1,99,1,-1,5},
@@ -276,11 +276,10 @@ const MenuRow menus[] = {
   {38,"38 ?????. ????.","38 Ret. norm",10,1,10,1,-1,2},
   {39,"39 ?????. ????","39 Ret. water",4,1,10,1,-1,2},
   {40,"40 ????. ???.","40 HAN logic",0,0,1,1,0,0},
-  {41,"41 CAN ????.","41 CAN speed",6,0,8,1,0,0}, //6 (125kbps), 3 (250kbps), 2 (375kbps), 1 (750kbps)
+  {41,"41 CAN ????.","41 CAN speed",4,0,6,1,0,0},
   {42,"42 CAN ???.","42 CAN address",0x11,0x01,0xFE,1,0,0}, 
-  {43,"43 DO ?????.","43 DO func.",0,0,6,1,0,0}, 
-  {44,"44 ????????", "44 Firmware", 50,0,100,0,1,0},
-  {45,"45 ????", "45 Language",1,0,1,1,0,0},
+  {43,"43 ????????", "43 Firmware", 10,0,100,0,1,0},
+  {44,"44 ????", "44 Language",1,0,1,1,0,0},
 };
 
 class ChannelControl{	
@@ -339,13 +338,12 @@ class ChannelControl{
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
 uint16_t params_buf[PARAMETERS+1]; // zero byte - FLASH not erased info
 uint32_t res_addr = 0;
 uint32_t tick = 0;
 uint16_t speed_tick = 0;
 uint16_t adc_curr_L, adc_curr_R = 0; 
-uint32_t temp01, temp02 = 0;
+uint32_t temp01 = 0;
 ChannelControl Left, Right;
 struct AnalogFilter pa[7]; // analog pin filter pins PA0-PA5
 
@@ -367,6 +365,7 @@ uint8_t i2c_buf[I2C_BUFFER];
 uint8_t i2c_receive[I2C_BUFFER];
 uint8_t regAddress = 0;
 
+
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -376,32 +375,14 @@ CAN_HandleTypeDef hcan;
 
 CRC_HandleTypeDef hcrc;
 
-I2C_HandleTypeDef hi2c1;
+I2C_HandleTypeDef hi2c2;
 
 IWDG_HandleTypeDef hiwdg;
 
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
 
-PCD_HandleTypeDef hpcd_USB_FS;
-
 /* USER CODE BEGIN PV */
-
-struct MainDataSet main_data;
-struct i2c_data_ i2c_data;
-uint32_t timers[8];
-uint32_t tick100Hz = 0;
-uint16_t  temp0, temp2 = 0;
-
-ADC_ChannelConfTypeDef sConfig = {0};
-ADC_AnalogWDGConfTypeDef AnalogWDGConfig = {0};
-
-AnalogFilter valLn, valLp, valRn, valRp; //jamming protection
-AnalogFilter oc_valLn, oc_valLp, oc_valRn, oc_valRp;  //over current protection (short circuit)
-JoystickFilter an_R, an_L;
-
-float _err_measure = 0.8; 
-float _q = 0.1;   
 
 /* USER CODE END PV */
 
@@ -411,40 +392,47 @@ static void MX_GPIO_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_CAN_Init(void);
 static void MX_CRC_Init(void);
-static void MX_I2C1_Init(void);
+static void MX_I2C2_Init(void);
 static void MX_IWDG_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
-static void MX_USB_PCD_Init(void);
 /* USER CODE BEGIN PFP */
+
+struct MainDataSet main_data;
+struct i2c_data_ i2c_data;
+uint32_t timers[8];
+uint8_t tick100Hz = 0;
+uint16_t  temp0, temp2 = 0;
+
+ADC_ChannelConfTypeDef sConfig = {0};
+ADC_AnalogWDGConfTypeDef AnalogWDGConfig = {0};
+
+AnalogFilter valLn, valLp, valRn, valRp; //jamming protection
+AnalogFilter oc_valLn, oc_valLp, oc_valRn, oc_valRp;  //over current protection (short circuit)
+JoystickFilter an_R, an_L;
+
+
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-
 void Init_Channels()
 {
-  //Base PCB (add USB)
+
 	//PB1 NP_ML+
   //PB0 NP_ML-
   //PA7 NP_MR+
   //PA6 NP_MR-
-	
-	//First USB (no USB)
-	//PB10 NP_ML+
-	//PB1 NP_ML-
-	//PA7 NP_MR+
-	//PA6 NP_MR-
 		
 	Left.port1 = GPIOB;
 	Left.pin1 = GPIO_PIN_1;
 	Left.port2 = GPIOB;
 	Left.pin2 = GPIO_PIN_0;
 	Left.InitChannel();
-	Left.timer_pwm_backward = 4;
-	Left.timer_pwm_hold_on = 10;
+	Left.timer_pwm_backward = 0;
+	Left.timer_pwm_hold_on = 0;
 
 	Right.port1 = GPIOA;
 	Right.pin1 = GPIO_PIN_7;
@@ -460,6 +448,8 @@ void InitMainScreenSet()
 {
 
   main_data.Left_button = false;
+  main_data.Left_Strength_level = 0;
+
   main_data.Right_button = false;
   main_data.Squeeze_mode = false;
   main_data.Water_mode = false;
@@ -475,8 +465,6 @@ void InitMainScreenSet()
 	main_data.DO_error = 0;
   main_data.SW_L_state = 0;
 	main_data.SW_R_state = 0;
-	main_data.Left_Current = 0;
-	main_data.Right_Current = 0;
 }
 
 void InitAnalogPins(void)
@@ -513,19 +501,21 @@ void InitAnalogPins(void)
 	pa[3].out_value = 0;
 	pa[3].analog_limit = 0;	
 	
-	// Joystick L resistor initialization
-	
-	an_L.scanrate = 2;	
-	an_L.joystick_step = 0;
-	an_L.mirror_joy_step = 0;
-	an_L.enabled = false;	
-	
-	// Joystick R resistor initialization
+	//X_R
+  pa[4].trip = false;
+	pa[4].in_value = 0;
+	pa[4].time_rate = 3;  
+	pa[4].time_count = 0;
+	pa[4].out_value = 0;
+	pa[4].analog_limit = 0;
 
-	an_R.scanrate = 2;	
-	an_R.joystick_step = 0;
-	an_R.mirror_joy_step = 0;
-	an_R.enabled = false;
+  //X_L
+  pa[5].trip = false;
+	pa[5].in_value = 0;
+	pa[5].time_rate = 3;  
+	pa[5].time_count = 0;
+	pa[5].out_value = 0;
+	pa[5].analog_limit = 0;	
 	
 }
 
@@ -609,25 +599,13 @@ void _joystick_filter(JoystickFilter * source)
 
 bool _switch_filter(struct SwitchFilter * source)
 {	
-	
-	source->outstate = false;
-	
 	if (!(HAL_GPIO_ReadPin(source->port,source->pin)))
 	{
 		if (source->curr_scan >= source->scanrate){	
-		   
-			if (source->off) 
-			{
-				
-			  source->on_trigger = true;
-			  source->protection_reset = true;
-			}
-			
 		    
-			source->off = false;
 			
 			source->outstate = true;
-			
+			source->off_trigger = true;
 		} else
 	
 		source->curr_scan++;
@@ -637,11 +615,8 @@ bool _switch_filter(struct SwitchFilter * source)
 		
 	} else
 	{ 
-		  if (!source->off) source->off_trigger = true;
-		
 	    source->curr_scan = 0;	
-  		source->off = true;
-			
+			source->outstate = false;
 		
 		  if (source->off_trigger) 
 			{ 
@@ -649,6 +624,7 @@ bool _switch_filter(struct SwitchFilter * source)
 				source->off_trigger = false;
 			}
 	}
+
 	
 	return source->outstate;
 }
@@ -756,12 +732,11 @@ void Init_i2c_data()
 
 void Init_Switches()
 {
-    //Button_L  First PCB (no USB) -> PA11, Base PCB (add USB) -> PB10 
+    //Button_L  PB10 
 		in_left.outstate = false;
 	  in_left.lock = false;
 	  in_left.off_trigger = false;
 	  in_left.on_trigger = false;
-	  in_left.protection_reset = false;
 	  in_left.port = GPIOB;
 	  in_left.pin = GPIO_PIN_10;
 	  in_left.scanrate = 4;
@@ -771,7 +746,6 @@ void Init_Switches()
 	  in_right.lock = false;
 	  in_right.off_trigger = false;
 	  in_right.on_trigger = false;
-	  in_right.protection_reset = false;
 	  in_right.port = GPIOA;
 	  in_right.pin = GPIO_PIN_10;
 	  in_right.scanrate = 4;
@@ -839,7 +813,7 @@ void Init_Switches()
 	  sw_mode1.pin = GPIO_PIN_15;
 	  sw_mode1.scanrate = 4;	
 		
-		//Mode 2    First PCB (no USB) -> PA12, Base PCB (add USB) -> PB11 
+		//Mode 2    PB11
     sw_mode2.outstate = false;
 		sw_mode2.lock = false;
 		sw_mode2.off_trigger = false;
@@ -879,7 +853,7 @@ void ChannelControl::InitChannel()
 
 void ChannelControl::Backward()
 {
-	//320Hz PWM 
+	//188Hz PWM 
 	
 	if (((!water_mode) && (timer_pwm_backward <= normal_mode_dc)) || ((water_mode) && (timer_pwm_backward <= water_dc)))
 	{
@@ -902,7 +876,7 @@ void ChannelControl::VoltageOff()
 }
 
 void ChannelControl::ForwardHoldOn()
-//  160 Hz PWM
+//  94 Hz PWM
 {
     if (hold_on_dc > 0)
     {
@@ -1148,6 +1122,7 @@ void WriteDefsToFlash()
 {
 	params_buf[0] = 0;
 	
+	uint16_t tt[3];
 	
 	for (int i = 1; i <= PARAMETERS; i++){
 		   params_buf[i] = menus[i-1].def;
@@ -1162,12 +1137,15 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) // 100Hz Timer
 { 
 	if(htim->Instance == TIM3)
   {
-		if (Left.timer_count_en) Left.timer_count++;
-    if (Left.timer_count == 0xFFFF) Left.timer_count = 0;
-
-    if (Right.timer_count_en) Right.timer_count++;
-    if (Right.timer_count == 0xFFFF) Right.timer_count = 0;
-
+		
+		//Calculate PWM (persentage to 8-bit value)
+//		pwm_L.dc_fill = Calc_PWM(pwm_L.duty_cycle);
+//		pwm_R.dc_fill = Calc_PWM(pwm_R.duty_cycle);
+		
+		// Analog values pa[0]...pa[5]
+	
+			for (uint8_t i=0;i<6;i++)
+				AnalogPinTrip(&pa[i]);
 	
 		tick100Hz++;
 		
@@ -1183,53 +1161,21 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) // 100Hz Timer
 		_switch_filter(&sw_squeeze); 
 		_switch_filter(&sw_mode1);  
 		_switch_filter(&sw_mode2); 		
-		
-		
-		CurrentProtection(&valLn);
-		CurrentProtection(&valLp);
-		
-		if (valLn.trip || valLp.trip)
-	  {
-			// Stop Left Channel
-			Left.Stop();
-		}
-
-	
-		CurrentProtection(&valRn);
-		CurrentProtection(&valRp);
-		
-		if (valRn.trip || valRp.trip)
-		{
-			// Stop Right Channel
-			Right.Stop();
-		} 
-		
-
-		
-	
-		Left.switch_down = sw_leftdown.outstate;
-		Left.switch_up = sw_leftup.outstate;
-	
-		Right.switch_down = sw_rightdown.outstate;
-		Right.switch_up = sw_rightup.outstate;
 
 
 	}
 	
 	if (htim->Instance == TIM4)
 	{
-    	if (Left.timer_pwm_backward < 10) Left.timer_pwm_backward++; else Left.timer_pwm_backward = 0;
-	    if (Right.timer_pwm_backward < 10) Right.timer_pwm_backward++; else Right.timer_pwm_backward = 0;
-
-	    if (Left.timer_pwm_hold_on < 20) Left.timer_pwm_hold_on++; else Left.timer_pwm_hold_on = 0;
-	    if (Right.timer_pwm_hold_on < 20) Right.timer_pwm_hold_on++; else Right.timer_pwm_hold_on = 0;	
+		//DoublePWM(&pwm_L);
+		//DoublePWM(&pwm_R);
 	}
 }
 
-void ProtectionProcess(uint32_t channel, uint32_t value)
+void ProtectionProcess(uint32_t * channel, uint32_t * value)
 {
 	
-	 switch (channel)
+	 switch (* channel)
 	 {
 		 case ADC_CHANNEL_0: //MR-
 			  if (Right.water_mode || (Right.hold_on_dc > 0))
@@ -1239,13 +1185,12 @@ void ProtectionProcess(uint32_t channel, uint32_t value)
 				else
 					oc_valRn.time_rate = SQUELCH_MAIN_MODE;  
 				
-				oc_valRn.in_value = value;
-				
 				CurrentProtection(&oc_valRn); //Fast short circuit
 				if (oc_valRn.trip)
 				{
 					// Stop Right Channel
 				  Right.Stop();
+					in_right.reset = true;
 				}
 		 break;
 		 
@@ -1257,12 +1202,12 @@ void ProtectionProcess(uint32_t channel, uint32_t value)
 				else
 					oc_valRp.time_rate = SQUELCH_MAIN_MODE;  
 				
-				oc_valRp.in_value = value;
 				CurrentProtection(&oc_valRp); //Fast short circuit
 				if (oc_valRp.trip)
 				{
 					// Stop Right Channel
 				  Right.Stop();
+					in_right.reset = true;
 				}
 		 break;		 
 		 
@@ -1274,13 +1219,12 @@ void ProtectionProcess(uint32_t channel, uint32_t value)
 				else
 					oc_valLn.time_rate = SQUELCH_MAIN_MODE;  
 				
-				oc_valLn.in_value = value;
 				CurrentProtection(&oc_valLn); //Fast short circuit
 				if (oc_valLn.trip)
 				{
 					// Stop Left Channel
 				  Left.Stop();
-					
+					in_left.reset = true;
 				} 
 		 break;		
 		 
@@ -1293,20 +1237,18 @@ void ProtectionProcess(uint32_t channel, uint32_t value)
 				else
 					oc_valLp.time_rate = SQUELCH_MAIN_MODE;  
 				
-				oc_valLp.in_value = value;
 				CurrentProtection(&oc_valLp); //Fast short circuit
 				if (oc_valLp.trip)
 				{
 					// Stop Left Channel
 				  Left.Stop();
-
+					in_left.reset = true;
 				} 
 		 break;		
 	 }
 	 
 	
 }
-
 
 uint32_t GetADC1_Value(uint32_t channel)
 {
@@ -1319,7 +1261,7 @@ uint32_t GetADC1_Value(uint32_t channel)
 		sConfig.SamplingTime = ADC_SAMPLETIME_55CYCLES_5; //or any other value available.
 
 		//add to channel select
-    
+    temp01++;
 		if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
 		{
 				return -1;
@@ -1334,7 +1276,7 @@ uint32_t GetADC1_Value(uint32_t channel)
 		//remove from channel select
 
 		HAL_ADC_Stop(&hadc1);
-		
+		temp01++;
 		sConfig.Rank = 0; //ADC_RANK_NONE;
 
 		
@@ -1343,18 +1285,11 @@ uint32_t GetADC1_Value(uint32_t channel)
 			return -1;
 		}
 		
+		temp01++;
+		temp01=122;
+		//ProtectionProcess(&g_ADCValue, &channel);
 
 		return (g_ADCValue);
-}
-
-void Init_Joystick()
-{
-	for (int i = 0; i <=9; i++)
-	{
-		an_L.steps[i] = params_buf[i+10];
-		an_R.steps[i] = params_buf[i+20];
-	}
-	
 }
 
 
@@ -1367,16 +1302,12 @@ void WriteParamsToFlash()
 		if ((params_buf[i] < (uint16_t) menus[i-1].min) || (params_buf[i] > (uint16_t) menus[i-1].max)) params_buf[i] = menus[i-1].def;
 	}
 	
-	Init_Protections();
-	Init_Joystick();
-	
 	write_to_flash(&params_buf[0]);
 }
 
 void UpdateStatus()
 {
 	bool write_params = false;
-	uint16_t temp_curr = 0;
 	
 	main_data.Left_On = Left.moving_bwd | Left.moving_fwd; 
 	main_data.Right_On = Right.moving_bwd | Right.moving_fwd;
@@ -1404,25 +1335,23 @@ void UpdateStatus()
 	i2c_buf[1] = i2c_data.statusbyte0;
 	i2c_buf[2] = i2c_data.statusbyte1;
 	i2c_buf[3] = i2c_data.statusbyte2;
-	i2c_buf[4] = main_data.Left_Current;
-	i2c_buf[5] = main_data.Right_Current;
-	i2c_buf[6] = i2c_data.current_page;
+	i2c_buf[4] = i2c_data.current_page;
 	
 	
 	// current parameters at page						 
 	for (int i=0; i<5; i++)
 	{
-		if ((i2c_data.current_page > 0) && (i2c_data.current_page <= 9))
+		if ((i2c_data.current_page > 0) && (i2c_data.current_page <= 6))
 		{      
 		  int index = i+1+(i2c_data.current_page-1)*5;
 			
 			if (index <= PARAMETERS)
-			    i2c_buf[7+i] = params_buf[index];
+			    i2c_buf[5+i] = params_buf[index];
 			else
-			    i2c_buf[7+i] = 0;
+			    i2c_buf[5+i] = 0;
 		}
 		else
-			 i2c_buf[7+i] = 0;
+			 i2c_buf[5+i] = 0;
 	}
 	
 	if ((i2c_data.paramfromdisp_addr > 0) && (i2c_data.paramfromdisp_addr <= PARAMETERS))
@@ -1436,33 +1365,18 @@ void UpdateStatus()
 			
 			if (write_params)	
 			{
-				WriteParamsToFlash();  			
+				WriteParamsToFlash();     
 			}
 			
 		}
 	}
-	params_buf[4] = an_L.in_value;
-	params_buf[5] = Left.goal_step*10+Left.curr_step;
-	params_buf[6] = an_L.enabled;
-	
-	params_buf[7] = an_R.in_value;
-	params_buf[8] = Right.goal_step*10+Right.curr_step;
-	params_buf[9] = an_R.enabled;	
-	
-	temp_curr = (pa[2].out_value+pa[3].out_value)*10/CURRENT_COEFFICIENT;
-	if (temp_curr > 0xFF) temp_curr = 0xFF;
-	
-	main_data.Left_Current = temp_curr;
-	
-	temp_curr = (pa[0].out_value+pa[1].out_value)*10/CURRENT_COEFFICIENT;
-	if (temp_curr > 0xFF) temp_curr = 0xFF;
-	
-	main_data.Right_Current = temp_curr;
+
 
 }
 
 void Process_Channels()
 {
+	bool sq_off_left, sq_off_right = false;
   uint8_t step = 0;
 		
     if ((!valLn.trip) && (!valLp.trip) && (!oc_valLn.trip) && (!oc_valLp.trip))
@@ -1477,9 +1391,7 @@ void Process_Channels()
 			if (in_left.outstate && !(params_buf[40] && in_right.outstate))  // Button L process
 			{
 				Left.control_source = true;
-				Left.goal_step = 4;			
-			
-        			
+				Left.goal_step = 4;				
 			}	
 			else   //Joystick Process
 			{
@@ -1534,19 +1446,17 @@ void Process_Channels()
 
 			}
 			
-			
       if (sq_off_left){
 				Left.goal_step = 0;
 				sq_off_left = false;
 			}
-			
 			
 			Left.hold_on_dc = params_buf[36];
 			Left.normal_mode_dc = params_buf[38];
 			Left.water_dc = params_buf[39];
 			
 			Left.Process(); // Process L channel
-			
+					
 		} 
 
 
@@ -1623,7 +1533,7 @@ void CANsendmsg()
 	CAN_TxHeaderTypeDef msgHeader;
   uint8_t msgData[8];
 
-	if (params_buf[41] == 0) return;
+	if (params_buf[18] == 0) return;
 	
   if (HAL_CAN_GetTxMailboxesFreeLevel(&hcan) != 0)
   {
@@ -1639,9 +1549,9 @@ void CANsendmsg()
 		msgData[0] = i2c_data.statusbyte0;
 		msgData[1] = i2c_data.statusbyte1;
 		msgData[2] = i2c_data.statusbyte2;
-		msgData[3] = main_data.Left_Current;
-		msgData[4] = main_data.Right_Current;
-
+		
+		msgData[3] = params_buf[9];  //current L
+		msgData[4] = params_buf[10]; //current R
     
     HAL_CAN_AddTxMessage(&hcan, &msgHeader, &msgData[0], &mailBoxNum);
   }
@@ -1650,8 +1560,6 @@ void CANsendmsg()
 
 void ProcessDIevents()
 {
-	
-//Base PCB (with USB)
 //Button_L  PB10 
 //Button_R  PA10
 //SW_L_Down PB15
@@ -1746,43 +1654,6 @@ void ProcessDIevents()
 	
 }
 
-void DO_Error(bool state)
-{
-  if (state) HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_SET);
-	else
-		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_RESET);
-}
-
-void DO_Mode1(bool state)
-{
-  if (state) HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_SET);
-	else
-		  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_RESET);
-}
-
-float expRunningAverageAdaptive(float newVal) {
-  static float filVal = 0;
-  float k;
-
-  if (abs(newVal - filVal) > 1.5) k = 0.9;
-  else k = 0.03;
-  
-  filVal += (newVal - filVal) * k;
-  return filVal;
-}
-
-
-float simpleKalman(float newVal) {
-  float _kalman_gain, _current_estimate;
-  static float _err_estimate = _err_measure;
-  static float _last_estimate;
-  _kalman_gain = (float)_err_estimate / (_err_estimate + _err_measure);
-  _current_estimate = _last_estimate + (float)_kalman_gain * (newVal - _last_estimate);
-  _err_estimate =  (1.0 - _kalman_gain) * _err_estimate + fabs(_last_estimate - _current_estimate) * _q;
-  _last_estimate = _current_estimate;
-  return _current_estimate;
-}
-
 
 /* USER CODE END 0 */
 
@@ -1793,8 +1664,7 @@ float simpleKalman(float newVal) {
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  uint32_t value = 0;
-	bool tmp = false;
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -1803,27 +1673,28 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+	temp01++;
   /* USER CODE END Init */
 
   /* Configure the system clock */
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
+	
+	
 
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_ADC1_Init();
-  MX_I2C1_Init();
-  MX_IWDG_Init();
+
+  MX_I2C2_Init();
+	MX_IWDG_Init();
   MX_TIM3_Init();
   MX_TIM4_Init();
-	MX_USB_PCD_Init();
-  /* USER CODE BEGIN 2 */
-
-
+ // MX_USB_DEVICE_Init();
+  
+	/* USER CODE BEGIN 2 */
+	
 	res_addr = flash_search_adress(STARTADDR, PARAMETERS * DATAWIDTH);
 	read_last_data_in_flash(&params_buf[0]); 
 	 
@@ -1840,9 +1711,6 @@ int main(void)
 		HAL_Delay(5);
 		WriteDefsToFlash();	
 	}	 
-	
-  MX_CAN_Init();
-  MX_CRC_Init();
 
 	for (int j=0; j<8; j++)
 	     timers[j] = 0;	
@@ -1854,10 +1722,13 @@ int main(void)
   Init_Channels();
   //UpdateChannelsData();
   Init_Protections();
-	Init_Switches();
-	Init_Joystick();
+	Init_Switches();	
 	
-  CAN_FilterTypeDef canFilterConfig;
+	HAL_TIM_Base_Start_IT(&htim3);		
+	HAL_TIM_Base_Start_IT(&htim4);	
+	
+	
+	CAN_FilterTypeDef canFilterConfig;
   canFilterConfig.FilterBank = 0;
   canFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
   canFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
@@ -1870,120 +1741,89 @@ int main(void)
   canFilterConfig.SlaveStartFilterBank = 14;
   HAL_CAN_ConfigFilter(&hcan, &canFilterConfig);
   
-	
-	if (params_buf[18] > 0)
+  temp01++;
+
+  if (params_buf[18] > 0)
 	{
     HAL_CAN_Start(&hcan);
     HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
   }
-
-	HAL_TIM_Base_Start_IT(&htim3);		
-	HAL_TIM_Base_Start_IT(&htim4);	
-
+	
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
+		temp01+=10;
+		
+		
 		HAL_IWDG_Refresh(&hiwdg);
 		
-		if (in_left.protection_reset && (valLp.trip || oc_valLp.trip || valLn.trip || oc_valLn.trip)) {
+		//GetADC1_Value(ADC_CHANNEL_0);
+		HAL_Delay(5);
+		
+		//AnalogAddValue(&pa[0], GetADC1_Value(ADC_CHANNEL_0));  //MR-
+		//AnalogAddValue(&pa[1], GetADC1_Value(ADC_CHANNEL_1));  //MR+
+		//AnalogAddValue(&pa[2], GetADC1_Value(ADC_CHANNEL_2));  //ML-
+		//AnalogAddValue(&pa[3], GetADC1_Value(ADC_CHANNEL_3));  //ML+
+		//AnalogAddValue(&pa[4], GetADC1_Value(ADC_CHANNEL_4));  //X_R
+		//AnalogAddValue(&pa[5], GetADC1_Value(ADC_CHANNEL_5));  //X_L
+		
+		
+		//Process_Channels();
+		
+		/*
+		if (in_left.protection_reset && in_left.reset) {
 			valLp.trip = false;
 			oc_valLp.trip = false;
 			valLn.trip = false;
 			oc_valLn.trip = false;
-			Left.InitChannel();
+			in_left.reset = false;
 			in_left.protection_reset = false;
-		} 
-		
-		// DO Processing
-		if (params_buf[43] == 0) DO_Error(valLp.trip || oc_valLp.trip || valLn.trip || oc_valLn.trip ||
-			                                valRp.trip || oc_valRp.trip || valRn.trip || oc_valRn.trip);
-		if (params_buf[43] == 1) DO_Error(true);
-		if (params_buf[43] == 2) DO_Mode1(true); else DO_Mode1(false);
-		
+		}
 
 
-		if (in_right.protection_reset && (valRp.trip || oc_valRp.trip || valRn.trip || oc_valRn.trip)) {
+		if (in_right.protection_reset && in_right.reset) {
 			valRp.trip = false;
 			oc_valRp.trip = false;
 			valRn.trip = false;
 			oc_valRn.trip = false;
-			Right.InitChannel();
+			in_right.reset = false;
 			in_right.protection_reset = false;
 		}
-		
-		value = GetADC1_Value(ADC_CHANNEL_0);
-		// Fast overcurrent protection
-		ProtectionProcess(ADC_CHANNEL_0,value);
-		//Average RMS of current value for jamming protection
-		AnalogAddValue(&pa[0], value);  //MR-
-		
-		value = GetADC1_Value(ADC_CHANNEL_1);
-		ProtectionProcess(ADC_CHANNEL_1, value);
-		AnalogAddValue(&pa[1], value);  //MR+
-		
-		value = GetADC1_Value(ADC_CHANNEL_2);
-		ProtectionProcess(ADC_CHANNEL_2, value);
-		AnalogAddValue(&pa[2], value);  //ML-
-		
-		value = GetADC1_Value(ADC_CHANNEL_3);
-		ProtectionProcess(ADC_CHANNEL_3, value);
-		AnalogAddValue(&pa[3], value); //ML+
-		
-		
-		Process_Channels();
-		
-
 		
 		if ((HAL_GetTick() - timers[0]) > 100) //0.1 sec
 		{ 
 			UpdateStatus();
+			//UpdateChannelsData();
 			ProcessDIevents();
 			
 			timers[0] = HAL_GetTick();	
 		}
 		
-		
 
 		
 		if ((HAL_GetTick() - timers[1]) > 150) //0.15 sec
 		{	
-			
-			HAL_I2C_Master_Transmit(&hi2c1, (I2C_SLAVE_ADDRESS << 1), &i2c_buf[0], I2C_BUFFER,  I2C_TIMEOUT);
+			HAL_I2C_Master_Transmit(&hi2c2, (I2C_SLAVE_ADDRESS << 1), &i2c_buf[0], I2C_BUFFER,  I2C_TIMEOUT);
 			
 			CANsendmsg();
 			timers[1] = HAL_GetTick();	
 		}
 		
 		
-		if ((HAL_GetTick() - timers[2]) > 10) //every 10 ms
+		if ((HAL_GetTick() - timers[2]) > 5) //every 5 ms
 		{			
-			AnalogAverage(&pa[0]);
-			valRn.in_value = pa[0].out_value;  //MR-
-			AnalogAverage(&pa[1]);
-			valRp.in_value = pa[1].out_value;  //MR+
-			AnalogAverage(&pa[2]);
-			valLn.in_value = pa[2].out_value;  //ML-
-			AnalogAverage(&pa[3]);
-			valLp.in_value = pa[3].out_value;  //ML+
-			
-
-			
-			
 			timers[2] = HAL_GetTick();
 		}
 
 		
-		if ((HAL_GetTick() - timers[3]) > 50) //50 msec
+		if ((HAL_GetTick() - timers[3]) > 300) //0.3 sec
 		{
-			an_L.in_value = simpleKalman(GetADC1_Value(ADC_CHANNEL_4)/41);     //X_L  /4096*100%
-      an_R.in_value = simpleKalman(GetADC1_Value(ADC_CHANNEL_5)/41); 	   //X_R  /4096*100%		
-
-	    _joystick_filter(&an_L);
-	    _joystick_filter(&an_R);
+			AnalogAverage(&pa[0]);
+			AnalogAverage(&pa[1]);
+			AnalogAverage(&pa[4]);
 			 
 			timers[3] = HAL_GetTick();
 		}
@@ -1992,7 +1832,7 @@ int main(void)
 		if ((HAL_GetTick() - timers[4]) > 500) //0.50 sec
 		{
 					
-			HAL_I2C_Master_Receive_IT(&hi2c1, (I2C_SLAVE_ADDRESS << 1), &i2c_receive[0], I2C_BUFFER);
+			HAL_I2C_Master_Receive_IT(&hi2c2, (I2C_SLAVE_ADDRESS << 1), &i2c_receive[0], I2C_BUFFER);
 			i2c_data.current_page 			= i2c_receive[1];
 			i2c_data.paramfromdisp 			= i2c_receive[2];
 			i2c_data.paramfromdisp_addr = i2c_receive[3];
@@ -2001,8 +1841,8 @@ int main(void)
 			
 			timers[4] = HAL_GetTick();
 			
-		} 
-
+		} */
+	    
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -2016,6 +1856,7 @@ int main(void)
   */
 void SystemClock_Config(void)
 {
+ 
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
   RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
@@ -2025,12 +1866,12 @@ void SystemClock_Config(void)
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
-  RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
+  RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV2;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL6;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -2041,11 +1882,11 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV2;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
   {
     Error_Handler();
   }
@@ -2117,14 +1958,10 @@ static void MX_CAN_Init(void)
   /* USER CODE END CAN_Init 0 */
 
   /* USER CODE BEGIN CAN_Init 1 */
-	
-	if (params_buf[41] > 0)
-	  hcan.Init.Prescaler = params_buf[41]; //params_buf[18] = 6 (125kbps), 3 (250kbps), 2 (375kbps), 1 (750kbps)
-	else 
-		hcan.Init.Prescaler = 6;
 
   /* USER CODE END CAN_Init 1 */
   hcan.Instance = CAN1;
+  hcan.Init.Prescaler = 3;
   hcan.Init.Mode = CAN_MODE_NORMAL;
   hcan.Init.SyncJumpWidth = CAN_SJW_1TQ;
   hcan.Init.TimeSeg1 = CAN_BS1_8TQ;
@@ -2172,36 +2009,36 @@ static void MX_CRC_Init(void)
 }
 
 /**
-  * @brief I2C1 Initialization Function
+  * @brief I2C2 Initialization Function
   * @param None
   * @retval None
   */
-static void MX_I2C1_Init(void)
+static void MX_I2C2_Init(void)
 {
 
-  /* USER CODE BEGIN I2C1_Init 0 */
+  /* USER CODE BEGIN I2C2_Init 0 */
 
-  /* USER CODE END I2C1_Init 0 */
+  /* USER CODE END I2C2_Init 0 */
 
-  /* USER CODE BEGIN I2C1_Init 1 */
+  /* USER CODE BEGIN I2C2_Init 1 */
 
-  /* USER CODE END I2C1_Init 1 */
-  hi2c1.Instance = I2C1;
-  hi2c1.Init.ClockSpeed = 100000;
-  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
-  hi2c1.Init.OwnAddress1 = 0;
-  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-  hi2c1.Init.OwnAddress2 = 0;
-  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  /* USER CODE END I2C2_Init 1 */
+  hi2c2.Instance = I2C2;
+  hi2c2.Init.ClockSpeed = 100000;
+  hi2c2.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c2.Init.OwnAddress1 = 0;
+  hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c2.Init.OwnAddress2 = 0;
+  hi2c2.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c2.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c2) != HAL_OK)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN I2C1_Init 2 */
+  /* USER CODE BEGIN I2C2_Init 2 */
 
-  /* USER CODE END I2C1_Init 2 */
+  /* USER CODE END I2C2_Init 2 */
 
 }
 
@@ -2252,9 +2089,9 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 1000;
+  htim3.Init.Prescaler = 100;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 240;
+  htim3.Init.Period = 120;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
@@ -2297,9 +2134,9 @@ static void MX_TIM4_Init(void)
 
   /* USER CODE END TIM4_Init 1 */
   htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 100;
+  htim4.Init.Prescaler = 25;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim4.Init.Period = 75;
+  htim4.Init.Period = 15;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
@@ -2320,39 +2157,6 @@ static void MX_TIM4_Init(void)
   /* USER CODE BEGIN TIM4_Init 2 */
 
   /* USER CODE END TIM4_Init 2 */
-
-}
-
-
-
-/**
-  * @brief USB Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USB_PCD_Init(void)
-{
-
-  /* USER CODE BEGIN USB_Init 0 */
-
-  /* USER CODE END USB_Init 0 */
-
-  /* USER CODE BEGIN USB_Init 1 */
-
-  /* USER CODE END USB_Init 1 */
-  hpcd_USB_FS.Instance = USB;
-  hpcd_USB_FS.Init.dev_endpoints = 8;
-  hpcd_USB_FS.Init.speed = PCD_SPEED_FULL;
-  hpcd_USB_FS.Init.low_power_enable = DISABLE;
-  hpcd_USB_FS.Init.lpm_enable = DISABLE;
-  hpcd_USB_FS.Init.battery_charging_enable = DISABLE;
-  if (HAL_PCD_Init(&hpcd_USB_FS) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USB_Init 2 */
-
-  /* USER CODE END USB_Init 2 */
 
 }
 
@@ -2390,10 +2194,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB10 PB11 PB12 PB13
-                           PB14 PB15 */
-  GPIO_InitStruct.Pin = GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13
-                          |GPIO_PIN_14|GPIO_PIN_15;
+  /*Configure GPIO pins : PB12 PB13 PB14 PB15 */
+  GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
@@ -2404,8 +2206,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-}
+  /*Configure GPIO pins : PB6 PB7 */
+  GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
+}
 
 /* USER CODE BEGIN 4 */
 
