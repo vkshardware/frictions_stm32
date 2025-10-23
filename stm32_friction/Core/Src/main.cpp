@@ -246,24 +246,24 @@ const MenuRow menus[] = {
   {8,"08 ???. ??.","08 CMD R",0,0,0,0,1,0},
   {9,"09 X_R ?????.","09 X_R conn.,",0,0,0,0,0,0},
   {10,"10 X_L ???.","10 X_L low",10,0,99,1,0,2},
-  {11,"11 X_L 4 ??.","11 X_L 4 st.",25,0,99,1,0,2},
-  {12,"12 X_L 3 ??.","12 X_L 3 st.",28,0,99,1,0,2},
-  {13,"13 X_L 2 ??.","13 X_L 2 st.",31,0,99,1,0,2},
-  {14,"14 X_L 1 ??.","14 X_L 1 st.",34,0,99,1,0,2},
-  {15,"15 X_L 1 ???.","15 X_L 1 res.",45,0,99,1,0,2},
-  {16,"16 X_L 2 ???.","16 X_L 2 res.",48,0,99,1,0,2},
-  {17,"17 X_L 3 ???.","17 X_L 3 res.",53,0,99,1,0,2},
-  {18,"18 X_L 4 ???.","18 X_L 4 res.",56,0,99,1,0,2},
+  {11,"11 X_L 4 ??.","11 X_L 4 st.",29,0,99,1,0,2},
+  {12,"12 X_L 3 ??.","12 X_L 3 st.",34,0,99,1,0,2},
+  {13,"13 X_L 2 ??.","13 X_L 2 st.",38,0,99,1,0,2},
+  {14,"14 X_L 1 ??.","14 X_L 1 st.",42,0,99,1,0,2},
+  {15,"15 X_L 1 ???.","15 X_L 1 res.",58,0,99,1,0,2},
+  {16,"16 X_L 2 ???.","16 X_L 2 res.",62,0,99,1,0,2},
+  {17,"17 X_L 3 ???.","17 X_L 3 res.",66,0,99,1,0,2},
+  {18,"18 X_L 4 ???.","18 X_L 4 res.",70,0,99,1,0,2},
   {19,"19 X_L ????.","19 X_L high",90,0,99,1,0,2},
   {20,"20 X_R ???.","20 X_R low",10,0,99,1,0,2},
-  {21,"21 X_R 4 ??.","21 X_R 4 st.",25,0,99,1,0,2},
-  {22,"22 X_R 3 ??.","22 X_R 3 st.",28,0,99,1,0,2},
-  {23,"23 X_R 2 ??.","23 X_R 2 st.",31,0,99,1,0,2},
-  {24,"24 X_R 1 ??.","24 X_R 1 st.",34,0,99,1,0,2},
-  {25,"25 X_R 1 ???.","25 X_R 1 res.",45,0,99,1,0,2},
-  {26,"26 X_R 2 ???.","26 X_R 2 res.",48,0,99,1,0,2},
-  {27,"27 X_R 3 ???.","27 X_R 3 res.",53,0,99,1,0,2},
-  {28,"28 X_R 4 ???.","28 X_R 4 res.",56,0,99,1,0,2},
+  {21,"21 X_R 4 ??.","21 X_R 4 st.",29,0,99,1,0,2},
+  {22,"22 X_R 3 ??.","22 X_R 3 st.",34,0,99,1,0,2},
+  {23,"23 X_R 2 ??.","23 X_R 2 st.",38,0,99,1,0,2},
+  {24,"24 X_R 1 ??.","24 X_R 1 st.",42,0,99,1,0,2},
+  {25,"25 X_R 1 ???.","25 X_R 1 res.",58,0,99,1,0,2},
+  {26,"26 X_R 2 ???.","26 X_R 2 res.",62,0,99,1,0,2},
+  {27,"27 X_R 3 ???.","27 X_R 3 res.",66,0,99,1,0,2},
+  {28,"28 X_R 4 ???.","28 X_R 4 res.",70,0,99,1,0,2},
   {29,"29 X_R ????.","29 X_R high",90,0,99,1,0,2},
   {30,"30 I????. ???.","30 Ijam. L",10,1,50,1,0,3},
   {31,"31 T????. ???.","31 Tjam. L",10,1,99,1,-1,5},
@@ -350,9 +350,9 @@ ChannelControl Left, Right;
 struct AnalogFilter pa[7]; // analog pin filter pins PA0-PA5
 
 struct SwitchFilter in_left, in_right, sw_leftdown, sw_leftup, sw_rightdown, sw_rightup, sw_water, sw_squeeze, sw_mode1, sw_mode2; 
-//Button_L  PB10 
+//Button_L  PB11 
 //Button_R  PA10
-//Mode 2    PB11
+//Mode 2    PB0
 //Mode 1    PA15
 //Water     PA9
 //Squeeze   PA8
@@ -427,8 +427,11 @@ static void MX_USB_PCD_Init(void);
 void Init_Channels()
 {
   //Base PCB (add USB)
-	//PB1 NP_ML+
-  //PB0 NP_ML-
+	//PB1 NP_ML-
+	//PB10 MP_ML+
+	//PB11 Button_L
+  //PB0 MODE2
+	//
   //PA7 NP_MR+
   //PA6 NP_MR-
 	
@@ -439,9 +442,9 @@ void Init_Channels()
 	//PA6 NP_MR-
 		
 	Left.port1 = GPIOB;
-	Left.pin1 = GPIO_PIN_1;
+	Left.pin1 = GPIO_PIN_10;
 	Left.port2 = GPIOB;
-	Left.pin2 = GPIO_PIN_0;
+	Left.pin2 = GPIO_PIN_1;
 	Left.InitChannel();
 	Left.timer_pwm_backward = 4;
 	Left.timer_pwm_hold_on = 10;
@@ -756,14 +759,14 @@ void Init_i2c_data()
 
 void Init_Switches()
 {
-    //Button_L  First PCB (no USB) -> PA11, Base PCB (add USB) -> PB10 
+    //Button_L  First PCB (no USB) -> PA11, Base PCB (add USB) -> PB11 
 		in_left.outstate = false;
 	  in_left.lock = false;
 	  in_left.off_trigger = false;
 	  in_left.on_trigger = false;
 	  in_left.protection_reset = false;
 	  in_left.port = GPIOB;
-	  in_left.pin = GPIO_PIN_10;
+	  in_left.pin = GPIO_PIN_11;
 	  in_left.scanrate = 4;
 	
 	  //Button_R  PA10
@@ -839,13 +842,13 @@ void Init_Switches()
 	  sw_mode1.pin = GPIO_PIN_15;
 	  sw_mode1.scanrate = 4;	
 		
-		//Mode 2    First PCB (no USB) -> PA12, Base PCB (add USB) -> PB11 
+		//Mode 2    First PCB (no USB) -> PA12, Base PCB (add USB) -> PB0 
     sw_mode2.outstate = false;
 		sw_mode2.lock = false;
 		sw_mode2.off_trigger = false;
 		sw_mode2.on_trigger = false;
 	  sw_mode2.port = GPIOB;
-	  sw_mode2.pin = GPIO_PIN_11;
+	  sw_mode2.pin = GPIO_PIN_0;
 	  sw_mode2.scanrate = 4;	
 }
 
@@ -1863,15 +1866,15 @@ int main(void)
   canFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
   canFilterConfig.FilterIdHigh = 0x0000;
   canFilterConfig.FilterIdLow = 0x0000;
-  canFilterConfig.FilterMaskIdHigh = 0x0000;
-  canFilterConfig.FilterMaskIdLow = 0x0000;
+  canFilterConfig.FilterMaskIdHigh = 0xFFFF;
+  canFilterConfig.FilterMaskIdLow = 0xFFFF;
   canFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
   canFilterConfig.FilterActivation = ENABLE;
   canFilterConfig.SlaveStartFilterBank = 14;
   HAL_CAN_ConfigFilter(&hcan, &canFilterConfig);
   
 	
-	if (params_buf[18] > 0)
+	if (params_buf[41] > 0)
 	{
     HAL_CAN_Start(&hcan);
     HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_FIFO0_MSG_PENDING);
@@ -2374,7 +2377,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6|GPIO_PIN_7, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_3|GPIO_PIN_4, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1|GPIO_PIN_10|GPIO_PIN_3|GPIO_PIN_4, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PA6 PA7 */
   GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
@@ -2383,19 +2386,19 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB0 PB1 PB3 PB4 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_3|GPIO_PIN_4;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : PB10 PB11 PB12 PB13
+  /*Configure GPIO pins : PB0 PB11 PB12 PB13
                            PB14 PB15 */
-  GPIO_InitStruct.Pin = GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13
                           |GPIO_PIN_14|GPIO_PIN_15;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PB1 PB10 PB3 PB4 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_10|GPIO_PIN_3|GPIO_PIN_4;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PA8 PA9 PA10 PA15 */

@@ -237,7 +237,7 @@ void print_friction(uint8_t side, uint8_t state)
 {
   uint8_t x, y = 0;
  
-  y = 16;
+  y = 22;
 
   if (side == 0) x = 50; else
   if (side == 1) x = 101;
@@ -258,7 +258,7 @@ void print_arrow(uint8_t side, uint8_t state)
 {
   uint8_t x, y = 0;
  
-  y = 22;
+  y = 25;
 
   if (side == 0) x = 39; else
   if (side == 1) x = 123;
@@ -380,7 +380,7 @@ void MainScreen(MainScreenSet * screen)
               break;    
   }
   
-  oled.setCursorXY(53, 22); 
+  oled.setCursorXY(53, 26); 
 
   switch(screen->Left_fault)
   {
@@ -411,7 +411,7 @@ void MainScreen(MainScreenSet * screen)
               break;    
   }
   
-  oled.setCursorXY(104, 22); 
+  oled.setCursorXY(104, 26); 
 
   switch(screen->Right_fault)
   {
