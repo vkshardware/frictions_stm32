@@ -7,6 +7,7 @@
 
 #include "FlashPROM.h"
 
+
 extern CRC_HandleTypeDef hcrc;
 extern uint32_t res_addr;
 
@@ -67,6 +68,7 @@ uint32_t flash_search_adress(uint32_t address, uint16_t cnt)
 //////////////////////// ЗАПИСЬ ДАННЫХ /////////////////////////////
 void write_to_flash(myBuf_t *buff)
 {
+
 	res_addr = flash_search_adress(res_addr, BUFFSIZE * DATAWIDTH); // ищем свободные ячейки начиная с последнего известного адреса
 
 	//////////////////////// ЗАПИСЬ ////////////////////////////
@@ -74,23 +76,26 @@ void write_to_flash(myBuf_t *buff)
 
 	for(uint16_t i = 0; i < BUFFSIZE; i++)
 	{
+	
 		if(HAL_FLASH_Program(WIDTHWRITE, res_addr, buff[i]) != HAL_OK)
 		{
 			uint32_t er = HAL_FLASH_GetError();
-			char str[64] = {0,};
+			//char str[64] = {0,};
 //			snprintf(str, 64, "ER %lu\n", er);
 		//	HAL_UART_Transmit(&huart1, (uint8_t*)str, strlen(str), 100);
 		}
 
 		res_addr = res_addr + DATAWIDTH;
 	}
-
+  
+	
 	HAL_FLASH_Lock(); // заблокировать флеш
-
+  
+	
 	
 	//////////////////////// проверка записанного (это можно удплить если неохота проверять) ////////////////////////
 	uint32_t crcbuff[BUFFSIZE] = {0,};
-
+  
 	for(uint16_t i = 0; i < BUFFSIZE; i++) crcbuff[i] = (uint32_t)buff[i]; // в функцию CRC32 нужно подавать 32-х битные значения, поэтому перегоняем 16-ти битный буфер в 32-х битный
 
 	
@@ -112,6 +117,8 @@ void write_to_flash(myBuf_t *buff)
 //	snprintf(str, 64, "SUM %lu %lu\n", sum1, sum2);
 //	HAL_UART_Transmit(&huart1, (uint8_t*)str, strlen(str), 100);
 	#endif
+	
+
 
 	if(sum1 != sum2) // если суммы записанного и прочитанного не равны, тогда что-то пошло не так
 	{

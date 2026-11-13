@@ -29,7 +29,7 @@
 /* USER CODE BEGIN PTD */
 
 
-#define PARAMETERS 45     //See also BUFFSIZE 45+1 in FlashPROM.h
+#define PARAMETERS 47     //See also BUFFSIZE 47+1 in FlashPROM.h
 #define PAGES_COUNT 6
 #define STR_LENGTH 15*2 // 2 bytes per symbol
 
@@ -68,26 +68,9 @@
 #define STATUS_BIT2_WATERMODE 2		 // Water Mode
 #define STATUS_BIT2_SQUEEZE 3        // Release both sides
 #define STATUS_BIT2_HOLD_ON_LOAD 4   // hold drive under load
+#define STATUS_BIT2_MODE1_ON 5 //MODE1 input activated
+#define STATUS_BIT2_MODE2_ON 6 //MODE2 input activated
 
-
-
-#define RESERVE1 (1 << PB0)  //Reserve 1 Output
-#define RESERVE2 (1 << PB1)  //Reserve 2 Input
-
-#define ON_R1 (1 << PB2)  // Right Forward Output
-#define ON_R2 (1 << PB3)  //Right Backward Output
-
-#define SW_R (1 << PD0) // Release Right
-#define RIGHT_DOWN (1 << PD1) // Right Down limit switch
-#define RIGHT_UP (1 << PD2) // Right Up limit switch
-#define SQUEEZE (1 << PD3) // Release and stay both sides
-#define WATER_MODE (1 << PD4) // Water Mode - slowly going back
-#define LEFT_DOWN (1 << PD5) // Left Down limit switch
-#define LEFT_UP (1 << PD6) // Left Up limit switch
-#define SW_L (1 << PD7) // Release Left
-
-#define ON_L1 (1 << PA6)  //Left Forward Output
-#define ON_L2 (1 << PA7)  //Left Backward Output
 
 
 #define CURRENT_OFF_DELAY 20   //current off delay 20 ms
@@ -183,21 +166,6 @@ struct i2c_data_{
   uint8_t paramfromdisp_addr;
 };
 
-struct _ProcessChannel{
-  uint8_t gear_mode;
-	bool button_pressed;
-	struct double_pwm * pwm; 
-	uint16_t  duty_cycle; 
-	bool squeeze;
-	bool force;
-	uint8_t * led;
-	uint8_t * strength;
-	uint8_t T_release;
-	uint8_t T_on;
-	bool fault;
-	uint16_t timer0;
-	uint16_t timer1;
-};
 
 
 
@@ -279,8 +247,11 @@ const MenuRow menus[] = {
   {41,"41 CAN ????.","41 CAN speed",6,0,8,1,0,0}, //6 (125kbps), 3 (250kbps), 2 (375kbps), 1 (750kbps)
   {42,"42 CAN ???.","42 CAN address",0x11,0x01,0xFE,1,0,0}, 
   {43,"43 DO ?????.","43 DO func.",0,0,6,1,0,0}, 
-  {44,"44 ????????", "44 Firmware", 50,0,100,0,1,0},
+  {44,"44 ????????", "44 Firmware", 52,0,100,0,1,0},
   {45,"45 ????", "45 Language",1,0,1,1,0,0},
+	{46,"46 ??1 ???.","46 DI1 left",0,0,4,1,0,0},
+  {47,"47 ??2 ????.","47 DI2 right",0,0,4,1,0,0},
+
 };
 
 class ChannelControl{	
@@ -289,7 +260,7 @@ class ChannelControl{
 	public:
     bool switch_up;
     bool switch_down;
-	  bool control_source; //0 - joystick, 1 - button
+	  uint8_t control_source; //0 - joystick, 1 - button, 2 - partial release input (mode1 or mode2)
 	  bool water_mode;  
 	  bool long_release;
 	  bool forward_end_trigger;
@@ -303,6 +274,8 @@ class ChannelControl{
 	  uint16_t timer_count;
 	  uint8_t goal_step;
 	  uint8_t curr_step;
+	  uint8_t partial_release;  
+	
 	  uint16_t prev_timer_count_position;
 	  float timer_count_position;
 
@@ -345,6 +318,7 @@ uint32_t res_addr = 0;
 uint32_t tick = 0;
 uint16_t speed_tick = 0;
 uint16_t adc_curr_L, adc_curr_R = 0; 
+uint32_t tick100Hz = 0;
 uint32_t temp01, temp02 = 0;
 ChannelControl Left, Right;
 struct AnalogFilter pa[7]; // analog pin filter pins PA0-PA5
@@ -390,7 +364,7 @@ PCD_HandleTypeDef hpcd_USB_FS;
 struct MainDataSet main_data;
 struct i2c_data_ i2c_data;
 uint32_t timers[8];
-uint32_t tick100Hz = 0;
+
 uint16_t  temp0, temp2 = 0;
 
 ADC_ChannelConfTypeDef sConfig = {0};
@@ -860,7 +834,7 @@ void ChannelControl::InitChannel()
 	timer_count_position = 0;
 	moving_up_stop_trip = false;
 	switch_up = false;
-	control_source = false;
+	control_source = 0;
 	switch_down = false;
 	timer_count = 0;
 	moving_fwd = false;
@@ -878,6 +852,7 @@ void ChannelControl::InitChannel()
 	water_mode = false;
 	curr_step = 0;
 	goal_step = 0;
+	partial_release = 0;
 }
 
 void ChannelControl::Backward()
@@ -907,8 +882,8 @@ void ChannelControl::VoltageOff()
 void ChannelControl::ForwardHoldOn()
 //  160 Hz PWM
 {
-    if (hold_on_dc > 0)
-    {
+   if (hold_on_dc > 0)
+   {
 		 moving_fwd = true;
 		 moving_bwd = false;
 		  
@@ -920,9 +895,9 @@ void ChannelControl::ForwardHoldOn()
 		  
 
 	   } else VoltageOff();
-	} 
+	 } 
 	
-	else Stop();
+	 else Stop();
 
 }
 
@@ -996,7 +971,7 @@ int8_t ChannelControl::Process()
 			jog_direction = true;
 			
 			
-			if (!control_source) coefficient_fwd = 12;   // If it is Joystick control, increase forward time
+			if (control_source == 0) coefficient_fwd = 12;   // If it is Joystick control, increase forward time
 			  
 		    else
 			    coefficient_fwd = 10;
@@ -1034,7 +1009,7 @@ int8_t ChannelControl::Process()
 			
 				if ((timer_count_en) && (curr_step < 4)) curr_step +=relative_step;
 
-				if ((curr_step < 4) || (!control_source))
+				if ((curr_step < 4) || (control_source == 0))
 				{
 					
 				  timer_count_en = false;
@@ -1400,7 +1375,8 @@ void UpdateStatus()
 																		 ((valRn.trip | valRp.trip) << STATUS_BIT1_R_TRIP_STAGE1)  ;
 		
 	i2c_data.statusbyte2 = ((oc_valLn.trip | oc_valLp.trip) << STATUS_BIT2_L_TRIP_STAGE2) | ((oc_valRn.trip | oc_valRp.trip) << STATUS_BIT2_R_TRIP_STAGE2) | 
-		              (sw_squeeze.outstate << STATUS_BIT2_SQUEEZE) | (sw_water.outstate << STATUS_BIT2_WATERMODE);		
+		              (sw_squeeze.outstate << STATUS_BIT2_SQUEEZE) | (sw_water.outstate << STATUS_BIT2_WATERMODE) | 
+									(sw_mode1.outstate << STATUS_BIT2_MODE1_ON) | (sw_mode2.outstate << STATUS_BIT2_MODE2_ON);		
 	
 	
 
@@ -1415,7 +1391,7 @@ void UpdateStatus()
 	// current parameters at page						 
 	for (int i=0; i<5; i++)
 	{
-		if ((i2c_data.current_page > 0) && (i2c_data.current_page <= 9))
+		if ((i2c_data.current_page > 0) && (i2c_data.current_page <= 10))
 		{      
 		  int index = i+1+(i2c_data.current_page-1)*5;
 			
@@ -1479,19 +1455,26 @@ void Process_Channels()
 			
 			if (in_left.outstate && !(params_buf[40] && in_right.outstate))  // Button L process
 			{
-				Left.control_source = true;
+				Left.control_source = 1;
 				Left.goal_step = 4;			
-			
-        			
+
 			}	
-			else   //Joystick Process
+			else  //MODE1 input partial release output
+			
+			if (sw_mode1.outstate && (params_buf[46] > 0))
+			{
+				Left.control_source = 2;
+				Left.goal_step = params_buf[46];
+			} 
+			else	 //Joystick Process
+			
 			{
 				
-				if (Left.control_source)
+				if (Left.control_source >= 1)
 				{
 				    Left.goal_step = 0;
 				    
-					if ((Left.curr_step == 0) && (!Left.moving_bwd)) Left.control_source = false;
+					if ((Left.curr_step == 0) && (!Left.moving_bwd)) Left.control_source = 0;
 					 
 				} else
 				{
@@ -1506,7 +1489,6 @@ void Process_Channels()
 					if ((step > 0) || (Left.curr_step > 0) || Left.moving_bwd || Left.moving_fwd )
 					{
 							Left.goal_step = step;
-							
 					}
 						
 				}		
@@ -1532,7 +1514,7 @@ void Process_Channels()
 			
 			if (sw_squeeze.outstate) {
 				
-				Left.control_source = true;
+				Left.control_source = 1;
 				Left.goal_step = 4;
 
 			}
@@ -1558,16 +1540,24 @@ void Process_Channels()
 			
 			if (in_right.outstate && !(params_buf[40] && in_left.outstate))  // Button R process
 			{
-				Right.control_source = true;
+				Right.control_source = 1;
 				Right.goal_step = 4;				
 			}	
+			else  //MODE2 input partial release output
+			
+			if (sw_mode2.outstate && (params_buf[47] > 0))
+			{
+				Right.control_source = 2;
+				Right.goal_step = params_buf[47];
+			} 			
+			
 			else   //Joystick Process
 			{
-				if (Right.control_source)
+				if (Right.control_source >= 1)
 				{
 				    Right.goal_step = 0;
 				    
-					if ((Right.curr_step == 0) && (!Right.moving_bwd)) Right.control_source = false;
+					if ((Right.curr_step == 0) && (!Right.moving_bwd)) Right.control_source = 0;
 				} else
 				{
 					if (an_R.enabled)
@@ -1601,7 +1591,7 @@ void Process_Channels()
 			Right.long_release = sw_squeeze.outstate; 
 
 			if (sw_squeeze.outstate) {
-				Right.control_source = true;
+				Right.control_source = 1;
 				Right.goal_step = 4; 
 			}
 			if (sq_off_right)
@@ -1745,8 +1735,7 @@ void ProcessDIevents()
 	}	
 	else
 	  main_data.SW_R_state = 0;
-	
-	
+		
 }
 
 void DO_Error(bool state)
@@ -1820,15 +1809,22 @@ int main(void)
   MX_GPIO_Init();
   MX_ADC1_Init();
   MX_I2C1_Init();
-  MX_IWDG_Init();
+  
   MX_TIM3_Init();
   MX_TIM4_Init();
 	MX_USB_PCD_Init();
+	MX_CRC_Init();
+	 
+	MX_IWDG_Init();
   /* USER CODE BEGIN 2 */
 
 
 	res_addr = flash_search_adress(STARTADDR, PARAMETERS * DATAWIDTH);
 	read_last_data_in_flash(&params_buf[0]); 
+	 
+  
+	
+  HAL_IWDG_Refresh(&hiwdg);
 	 
 	if (params_buf[0] == 0xFFFF)
 	{
@@ -1837,19 +1833,21 @@ int main(void)
 		WriteDefsToFlash();
 	}
 	
-	
+
 	if (!CheckParamsLimits(&params_buf[0]))
 	{
+		HAL_IWDG_Refresh(&hiwdg);
 		HAL_Delay(5);
 		WriteDefsToFlash();	
 	}	 
+ 
 	
-  MX_CAN_Init();
-  MX_CRC_Init();
+	MX_CAN_Init();
+
 
 	for (int j=0; j<8; j++)
 	     timers[j] = 0;	
-	
+
 	InitMainScreenSet();
 	//InitPWM();
 	Init_i2c_data();
@@ -1859,7 +1857,7 @@ int main(void)
   Init_Protections();
 	Init_Switches();
 	Init_Joystick();
-	
+
   CAN_FilterTypeDef canFilterConfig;
   canFilterConfig.FilterBank = 0;
   canFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;

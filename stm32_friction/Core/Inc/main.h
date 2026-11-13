@@ -31,6 +31,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+	extern  uint32_t tick100Hz;
 
 /* USER CODE END Includes */
 

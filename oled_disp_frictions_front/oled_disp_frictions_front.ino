@@ -26,7 +26,7 @@
 
 #define WAIT_100HZ 0xB1  // Timer2 100Hz
 
-#define PARAMETERS 45
+#define PARAMETERS 47
 
 
 
@@ -57,9 +57,12 @@
 #define STATUS_BIT2_WATERMODE 2		 // Water Mode
 #define STATUS_BIT2_SQUEEZE 3        // Release both sides
 #define STATUS_BIT2_HOLD_ON_LOAD 4   // hold drive under load
+#define STATUS_BIT2_MODE1_ON 5 //MODE1 input activated
+#define STATUS_BIT2_MODE2_ON 6 //MODE2 input activated
+
 
 #define KEY_PUSH_DELAY 3
-#define KEY_LONGPUSH_DELAY 25
+#define KEY_LONGPUSH_DELAY 50
 
 #define STR_LENGTH 15*2 // 2 bytes per symbol
 #define I2C_REG_SIZE 14
@@ -92,6 +95,8 @@ struct MainScreenSet{
   uint8_t Left_Movement; // 0 - stop, 1 - move down, 2 - move up
   uint8_t Right_fault; // 0 - normal, 1 - F1, 2 - F2
   uint8_t Left_fault; // 0 - normal, 1 - F1, 2 - F2
+  bool Mode1_on;
+  bool Mode2_on;
 };
 
 struct MenuRow{
@@ -151,8 +156,10 @@ const MenuRow menus[] PROGMEM = {
   {41,"41 CAN скор.","41 CAN speed",4,0,6,1,0,0},
   {42,"42 CAN адр.","42 CAN address",0x11,0x01,0xFE,1,0,0},
   {43,"43 DO функц.","43 DO func.",0,0,6,1,0,0}, 
-  {44,"44 Прошивка", "44 Firmware", 10,0,100,0,1,0},
+  {44,"44 Прошивка", "44 Firmware", 52,0,100,0,1,0},
   {45,"45 Язык", "45 Language",1,0,1,1,0,0},
+  {46,"46 Вх1 лев.","46 DI1 left",0,0,4,1,0,0},
+  {47,"47 Вх2 прав.","47 DI2 right",0,0,4,1,0,0},
 };
 
 MainScreenSet main_oled;
@@ -230,6 +237,9 @@ void InitMainScreenSet()
   main_oled.Left_fault = 0;
   main_oled.Right_fault = 0;
   main_oled.Hold_on = 0;
+
+  main_oled.Mode1_on = false;
+  main_oled.Mode2_on = false; 
 
 }
 
@@ -456,7 +466,19 @@ void MainScreen(MainScreenSet * screen)
   if (screen->Squeeze_mode)  //Squeeze mode
   {
     oled.setCursorXY(0, 56);
-    if (lang_eeprom == 0) oled.print(F("ВЫЖИМ")); else oled.print(F("SQUEEZE"));
+    if (lang_eeprom == 0) oled.print(F("ВЫЖ")); else oled.print(F("SQ"));
+  } 
+
+  if (screen->Mode1_on)  //Mode1_input
+  {
+    oled.setCursorXY(19, 56);
+    if (lang_eeprom == 0) oled.print(F("В1")); else oled.print(F("D1"));
+  } 
+
+  if (screen->Mode2_on)  //Mode2_input
+  {
+    oled.setCursorXY(30, 56);
+    if (lang_eeprom == 0) oled.print(F("В2")); else oled.print(F("D2"));
   } 
 
   oled.update();
@@ -559,7 +581,7 @@ void UpdateParams()
   
   if (menu_page == 9) 
   {
-     params_buf[(PARAMETERS-1)%5] = lang_eeprom;                     //45 parameter
+     params_buf[(45-1)%5] = lang_eeprom;                     //45 parameter
   }
       
 }
@@ -652,7 +674,10 @@ void Update_status()
   if (i2c_data.statusbyte2 & (1 << STATUS_BIT2_R_TRIP_STAGE2)) main_oled.Right_fault+=2;  
         
   main_oled.Squeeze_mode=i2c_data.statusbyte2 & (1 << STATUS_BIT2_SQUEEZE);  
-  main_oled.Hold_on = i2c_data.statusbyte2 & (1 << STATUS_BIT2_HOLD_ON_LOAD); 
+  main_oled.Hold_on = i2c_data.statusbyte2 & (1 << STATUS_BIT2_HOLD_ON_LOAD);
+   
+  main_oled.Mode1_on = i2c_data.statusbyte2 & (1 << STATUS_BIT2_MODE1_ON);
+  main_oled.Mode2_on = i2c_data.statusbyte2 & (1 << STATUS_BIT2_MODE2_ON);
 
 }
 
@@ -725,7 +750,7 @@ void onItemChange(const int index, const void* val, const byte valType) {
 boolean onItemPrintOverride(const int index, const void* val, const byte valType) {
 
   if (index > 0)
-  if (!((index > 5) && (menu_page == 9)))
+  if (!((index > 2) && (menu_page == 10)))
       return false;
       
 
@@ -789,6 +814,9 @@ void menu_page_select(int index)
                     break;             
     case 48 ... 53: menu_page = 9;
                     break;  
+    case 54 ... 59: menu_page = 10;
+                    break;  
+    
   }
 
 }
@@ -798,7 +826,7 @@ void DownButton()
   if (menu_visible)
   {
   
-        if (menu_index < PARAMETERS+8) //PARAMETERS+9-1. 9 EXIT titles
+        if (menu_index < PARAMETERS+9) //PARAMETERS+10-1. 10 EXIT titles
         {
           if (!Setup_param)
           {
@@ -844,7 +872,7 @@ void UpButton()
   {    
         if (menu_index == 0) 
         {
-           menu_index = PARAMETERS+8;    
+           menu_index = PARAMETERS+9;    
         }
         else
         if (menu_index > 0) 
@@ -860,11 +888,11 @@ void UpButton()
         //UpdateParams();
         menu.refresh();
 
-        if (menu_index == PARAMETERS+8)
+        if (menu_index == PARAMETERS+9)
         {
           if (!Setup_param)
           {
-            menu.gotoIndex_(5); 
+            menu.gotoIndex_(2); 
           } else
            menu.selectNext(0);
 
